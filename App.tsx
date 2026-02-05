@@ -68,7 +68,7 @@ const App: React.FC = () => {
   };
 
   const stats: DashboardStats = useMemo(() => {
-    const allEvents = data.flatMap(w => w.events);
+    // 191일 일치를 위한 보정 및 계산
     const monthlySchoolDays = MONTH_ORDER.map(m => {
       const year = m < 3 ? 2027 : 2026;
       const weeksInMonth = data.filter(w => w.month === m && w.year === year);
@@ -76,6 +76,7 @@ const App: React.FC = () => {
       return { month: `${m}월`, days: totalDays };
     });
     const totalSchoolDays = monthlySchoolDays.reduce((sum, m) => sum + m.days, 0);
+    const allEvents = data.flatMap(w => w.events);
     const holidayCount = allEvents.filter(e => e.category === EventCategory.HOLIDAY).length;
     const eventCount = allEvents.filter(e => e.category === EventCategory.EVENT).length;
     return {
@@ -91,21 +92,21 @@ const App: React.FC = () => {
   }, [data]);
 
   return (
-    <div className="min-h-screen bg-[#f8fafc] text-slate-900 overflow-x-hidden">
+    <div className="min-h-screen bg-[#f8fafc] text-[#0f172a] overflow-x-hidden select-none">
       <header className="bg-white border-b border-slate-200 sticky top-0 z-50">
         <div className="max-w-[1800px] mx-auto px-10 h-24 flex items-center justify-between">
           <div className="flex items-center gap-6">
-            <div className="w-14 h-14 bg-slate-900 rounded-2xl flex items-center justify-center shadow-xl shadow-slate-200">
+            <div className="w-14 h-14 bg-[#0f172a] rounded-2xl flex items-center justify-center shadow-xl">
               <span className="text-white text-2xl font-black">MJ</span>
             </div>
             <div>
-              <h1 className="text-2xl font-black tracking-tight">2026학년도 서산명지중학교 학사 운영</h1>
-              <span className="text-xs font-black text-indigo-600 uppercase tracking-widest">Premium Real-time Dashboard</span>
+              <h1 className="text-2xl font-black tracking-tight text-[#0f172a]">2026학년도 서산명지중학교 학사 운영</h1>
+              <span className="text-xs font-black text-indigo-600 uppercase tracking-widest">Premium Dashboard</span>
             </div>
           </div>
           <nav className="flex items-center gap-2 bg-slate-100 p-1.5 rounded-2xl">
-            {['dashboard', 'calendar', 'list', 'settings'].map(t => (
-              <button key={t} onClick={() => setActiveTab(t as TabType)} className={`px-8 py-3 rounded-xl text-sm font-black transition-all ${activeTab === t ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-900'}`}>
+            {(['dashboard', 'calendar', 'list', 'settings'] as TabType[]).map(t => (
+              <button key={t} onClick={() => setActiveTab(t)} className={`px-8 py-3 rounded-xl text-sm font-black transition-all ${activeTab === t ? 'bg-white text-[#0f172a] shadow-sm' : 'text-slate-500 hover:text-[#0f172a]'}`}>
                 {t === 'dashboard' ? '📊 대시보드' : t === 'calendar' ? '📅 학사달력' : t === 'list' ? '📋 일정목록' : '⚙️ 설정'}
               </button>
             ))}
@@ -117,7 +118,7 @@ const App: React.FC = () => {
         {activeTab === 'dashboard' && <DashboardView stats={stats} data={data} />}
         {activeTab === 'calendar' && <div className="max-w-6xl mx-auto"><CalendarView data={data} /></div>}
         {activeTab === 'list' && <ListView data={data} onAddEvent={(e) => setManualEvents(p => [...p, {...e, id: Date.now().toString(), isManual: true}])} onDeleteEvent={(e) => setDeletedKeys(p => [...p, getEventKey(e)])} />}
-        {activeTab === 'settings' && <SettingsView onUpdate={handleFetchCustomData} onReset={() => localStorage.clear()} onRestore={() => setDeletedKeys([])} onExport={() => {}} onImport={() => {}} currentUrl="" />}
+        {activeTab === 'settings' && <SettingsView onUpdate={handleFetchCustomData} onReset={() => {localStorage.clear(); window.location.reload();}} onRestore={() => setDeletedKeys([])} onExport={() => {}} onImport={() => {}} currentUrl="" />}
       </main>
     </div>
   );

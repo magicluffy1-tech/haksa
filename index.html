@@ -10,8 +10,21 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <style>
+        /* 시스템 다크모드 무력화 및 라이트 테마 강제 */
+        :root {
+            color-scheme: light !important;
+        }
         body {
             font-family: 'Pretendard', sans-serif;
+            background-color: #f8fafc !important;
+            color: #0f172a !important;
+        }
+        /* 다크모드 미디어 쿼리 대응 */
+        @media (prefers-color-scheme: dark) {
+            body {
+                background-color: #f8fafc !important;
+                color: #0f172a !important;
+            }
         }
     </style>
 <script type="importmap">
