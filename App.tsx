@@ -10,23 +10,36 @@ import SettingsView from './components/SettingsView';
 
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TabType>('dashboard');
-  const [csvContent, setCsvContent] = useState<string>(INITIAL_CSV_DATA);
-  const [data, setData] = useState<WeeklyData[]>([]);
-  const [manualEvents, setManualEvents] = useState<SchoolEvent[]>([]);
-  const [deletedKeys, setDeletedKeys] = useState<string[]>([]);
+  const [csvContent, setCsvContent] = useState<string>(() => {
+    return localStorage.getItem('smj_csv_content') || INITIAL_CSV_DATA;
+  });
+  
+  const [manualEvents, setManualEvents] = useState<SchoolEvent[]>(() => {
+    const saved = localStorage.getItem('smj_manual_events');
+    return saved ? JSON.parse(saved) : [];
+  });
+  
+  const [deletedKeys, setDeletedKeys] = useState<string[]>(() => {
+    const saved = localStorage.getItem('smj_deleted_keys');
+    return saved ? JSON.parse(saved) : [];
+  });
+
   const [loading, setLoading] = useState(false);
 
   const getEventKey = (e: SchoolEvent) => e.id || `${e.year}-${e.month}-${e.date}-${e.title}`;
 
+  // 데이터 변경 시 실시간 브라우저 저장
   useEffect(() => {
-    const savedManual = localStorage.getItem('smj_manual_events');
-    const savedDeleted = localStorage.getItem('smj_deleted_keys');
-    if (savedManual) setManualEvents(JSON.parse(savedManual));
-    if (savedDeleted) setDeletedKeys(JSON.parse(savedDeleted));
-    
-    const savedUrl = localStorage.getItem('custom_csv_url');
-    if (savedUrl) handleFetchCustomData(savedUrl);
-  }, []);
+    localStorage.setItem('smj_manual_events', JSON.stringify(manualEvents));
+  }, [manualEvents]);
+
+  useEffect(() => {
+    localStorage.setItem('smj_deleted_keys', JSON.stringify(deletedKeys));
+  }, [deletedKeys]);
+
+  useEffect(() => {
+    localStorage.setItem('smj_csv_content', csvContent);
+  }, [csvContent]);
 
   const processedData = useMemo(() => {
     const baseData = parseCSVToWeeklyData(csvContent);
@@ -48,35 +61,55 @@ const App: React.FC = () => {
     });
   }, [csvContent, manualEvents, deletedKeys]);
 
-  useEffect(() => {
-    setData(processedData);
-  }, [processedData]);
-
   const handleFetchCustomData = async (url: string) => {
     setLoading(true);
     try {
       const res = await fetch(url);
-      if (!res.ok) throw new Error('데이터 실패');
+      if (!res.ok) throw new Error('데이터 불러오기 실패');
       const text = await res.text();
       setCsvContent(text);
       localStorage.setItem('custom_csv_url', url);
     } catch (err) {
+      alert('CSV 데이터를 가져오는데 실패했습니다. URL을 확인해주세요.');
       console.error(err);
     } finally {
       setLoading(false);
     }
   };
 
+  const handleImportData = (jsonStr: string) => {
+    try {
+      const backup = JSON.parse(jsonStr);
+      if (backup.manualEvents) setManualEvents(backup.manualEvents);
+      if (backup.deletedKeys) setDeletedKeys(backup.deletedKeys);
+      if (backup.csvContent) setCsvContent(backup.csvContent);
+      alert('데이터가 성공적으로 복원되었습니다.');
+    } catch (e) {
+      alert('올바르지 않은 백업 데이터 형식입니다.');
+    }
+  };
+
+  const handleExportData = () => {
+    const backup = {
+      manualEvents,
+      deletedKeys,
+      csvContent,
+      exportedAt: new Date().toISOString()
+    };
+    const jsonStr = JSON.stringify(backup);
+    navigator.clipboard.writeText(jsonStr);
+    alert('현재 설정 데이터가 클립보드에 복사되었습니다. 메모장에 붙여넣어 보관하세요.');
+  };
+
   const stats: DashboardStats = useMemo(() => {
-    // 191일 일치를 위한 보정 및 계산
     const monthlySchoolDays = MONTH_ORDER.map(m => {
       const year = m < 3 ? 2027 : 2026;
-      const weeksInMonth = data.filter(w => w.month === m && w.year === year);
+      const weeksInMonth = processedData.filter(w => w.month === m && w.year === year);
       const totalDays = weeksInMonth.reduce((sum, w) => sum + w.schoolDays, 0);
       return { month: `${m}월`, days: totalDays };
     });
     const totalSchoolDays = monthlySchoolDays.reduce((sum, m) => sum + m.days, 0);
-    const allEvents = data.flatMap(w => w.events);
+    const allEvents = processedData.flatMap(w => w.events);
     const holidayCount = allEvents.filter(e => e.category === EventCategory.HOLIDAY).length;
     const eventCount = allEvents.filter(e => e.category === EventCategory.EVENT).length;
     return {
@@ -89,7 +122,7 @@ const App: React.FC = () => {
         { name: '공휴일/휴업', value: holidayCount }
       ]
     };
-  }, [data]);
+  }, [processedData]);
 
   return (
     <div className="min-h-screen bg-[#f8fafc] text-[#0f172a] overflow-x-hidden select-none">
@@ -115,11 +148,20 @@ const App: React.FC = () => {
       </header>
 
       <main className="max-w-[1800px] mx-auto p-10">
-        {activeTab === 'dashboard' && <DashboardView stats={stats} data={data} />}
-        {activeTab === 'calendar' && <div className="max-w-6xl mx-auto"><CalendarView data={data} /></div>}
-        {activeTab === 'list' && <ListView data={data} onAddEvent={(e) => setManualEvents(p => [...p, {...e, id: Date.now().toString(), isManual: true}])} onDeleteEvent={(e) => setDeletedKeys(p => [...p, getEventKey(e)])} />}
-        {activeTab === 'settings' && <SettingsView onUpdate={handleFetchCustomData} onReset={() => {localStorage.clear(); window.location.reload();}} onRestore={() => setDeletedKeys([])} onExport={() => {}} onImport={() => {}} currentUrl="" />}
+        {activeTab === 'dashboard' && <DashboardView stats={stats} data={processedData} />}
+        {activeTab === 'calendar' && <div className="max-w-6xl mx-auto"><CalendarView data={processedData} /></div>}
+        {activeTab === 'list' && <ListView data={processedData} onAddEvent={(e) => setManualEvents(p => [...p, {...e, id: Date.now().toString(), isManual: true}])} onDeleteEvent={(e) => setDeletedKeys(p => [...p, getEventKey(e)])} />}
+        {activeTab === 'settings' && <SettingsView onUpdate={handleFetchCustomData} onReset={() => { if(confirm('모든 데이터가 초기화됩니다. 계속하시겠습니까?')) { localStorage.clear(); window.location.reload(); } }} onRestore={() => setDeletedKeys([])} onExport={handleExportData} onImport={handleImportData} currentUrl={localStorage.getItem('custom_csv_url') || ''} />}
       </main>
+      
+      {loading && (
+        <div className="fixed inset-0 bg-white/80 backdrop-blur-sm z-[100] flex items-center justify-center">
+          <div className="flex flex-col items-center gap-4">
+            <div className="w-12 h-12 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+            <p className="font-black text-indigo-900">최신 학사 데이터를 동기화 중입니다...</p>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
