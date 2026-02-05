@@ -15,7 +15,6 @@ const App: React.FC = () => {
   const [manualEvents, setManualEvents] = useState<SchoolEvent[]>([]);
   const [deletedKeys, setDeletedKeys] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
-  const [lastSync, setLastSync] = useState<Date>(new Date());
 
   const getEventKey = (e: SchoolEvent) => e.id || `${e.year}-${e.month}-${e.date}-${e.title}`;
 
@@ -28,11 +27,6 @@ const App: React.FC = () => {
     const savedUrl = localStorage.getItem('custom_csv_url');
     if (savedUrl) handleFetchCustomData(savedUrl);
   }, []);
-
-  useEffect(() => {
-    localStorage.setItem('smj_manual_events', JSON.stringify(manualEvents));
-    localStorage.setItem('smj_deleted_keys', JSON.stringify(deletedKeys));
-  }, [manualEvents, deletedKeys]);
 
   const processedData = useMemo(() => {
     const baseData = parseCSVToWeeklyData(csvContent);
@@ -56,14 +50,13 @@ const App: React.FC = () => {
 
   useEffect(() => {
     setData(processedData);
-    setLastSync(new Date());
   }, [processedData]);
 
   const handleFetchCustomData = async (url: string) => {
     setLoading(true);
     try {
       const res = await fetch(url);
-      if (!res.ok) throw new Error('데이터를 가져오는데 실패했습니다.');
+      if (!res.ok) throw new Error('데이터 실패');
       const text = await res.text();
       setCsvContent(text);
       localStorage.setItem('custom_csv_url', url);
@@ -71,13 +64,6 @@ const App: React.FC = () => {
       console.error(err);
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleReset = () => {
-    if (window.confirm("모든 설정과 기록을 초기화하시겠습니까?")) {
-      localStorage.clear();
-      window.location.reload();
     }
   };
 
@@ -105,91 +91,33 @@ const App: React.FC = () => {
   }, [data]);
 
   return (
-    <div className="min-h-screen flex flex-col bg-slate-50 font-sans selection:bg-indigo-100 selection:text-indigo-900">
-      <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-slate-200">
-        <div className="max-w-[1600px] mx-auto px-4 lg:px-8">
-          <div className="flex items-center justify-between h-20">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-slate-900 rounded-2xl flex items-center justify-center shadow-lg">
-                <span className="text-white text-xl font-black">MJ</span>
-              </div>
-              <div>
-                <h1 className="text-xl font-black text-slate-900 leading-tight tracking-tight">2026학년도 서산명지중학교 학사 운영</h1>
-                <div className="flex items-center gap-2">
-                  <span className="flex h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Real-time Dashboard</span>
-                </div>
-              </div>
+    <div className="min-h-screen bg-[#f8fafc] text-slate-900 overflow-x-hidden">
+      <header className="bg-white border-b border-slate-200 sticky top-0 z-50">
+        <div className="max-w-[1800px] mx-auto px-10 h-24 flex items-center justify-between">
+          <div className="flex items-center gap-6">
+            <div className="w-14 h-14 bg-slate-900 rounded-2xl flex items-center justify-center shadow-xl shadow-slate-200">
+              <span className="text-white text-2xl font-black">MJ</span>
             </div>
-
-            <nav className="hidden md:flex items-center gap-1 bg-slate-100 p-1 rounded-xl">
-              {[
-                { id: 'dashboard', label: '대시보드', icon: '📊' },
-                { id: 'calendar', label: '학사달력', icon: '📅' },
-                { id: 'list', label: '상세일정', icon: '📋' },
-                { id: 'settings', label: '설정', icon: '⚙️' }
-              ].map(tab => (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id as TabType)}
-                  className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-black transition-all ${
-                    activeTab === tab.id
-                      ? 'bg-white text-slate-900 shadow-sm'
-                      : 'text-slate-500 hover:text-slate-900 hover:bg-white/50'
-                  }`}
-                >
-                  <span>{tab.icon}</span>
-                  {tab.label}
-                </button>
-              ))}
-            </nav>
+            <div>
+              <h1 className="text-2xl font-black tracking-tight">2026학년도 서산명지중학교 학사 운영</h1>
+              <span className="text-xs font-black text-indigo-600 uppercase tracking-widest">Premium Real-time Dashboard</span>
+            </div>
           </div>
+          <nav className="flex items-center gap-2 bg-slate-100 p-1.5 rounded-2xl">
+            {['dashboard', 'calendar', 'list', 'settings'].map(t => (
+              <button key={t} onClick={() => setActiveTab(t as TabType)} className={`px-8 py-3 rounded-xl text-sm font-black transition-all ${activeTab === t ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-900'}`}>
+                {t === 'dashboard' ? '📊 대시보드' : t === 'calendar' ? '📅 학사달력' : t === 'list' ? '📋 일정목록' : '⚙️ 설정'}
+              </button>
+            ))}
+          </nav>
         </div>
       </header>
 
-      <main className="flex-grow max-w-[1600px] mx-auto w-full px-4 lg:px-8 py-8">
-        {loading ? (
-          <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
-            <div className="w-12 h-12 border-4 border-slate-900 border-t-transparent rounded-full animate-spin"></div>
-            <p className="text-slate-500 font-bold animate-pulse">최신 학사 데이터를 불러오는 중...</p>
-          </div>
-        ) : (
-          <div className="animate-in fade-in slide-in-from-bottom-4 duration-700">
-            {activeTab === 'dashboard' && <DashboardView stats={stats} data={data} />}
-            {activeTab === 'calendar' && <CalendarView data={data} />}
-            {activeTab === 'list' && (
-              <ListView 
-                data={data} 
-                onAddEvent={(e) => setManualEvents(p => [...p, {...e, id: Date.now().toString(), isManual: true}])}
-                onDeleteEvent={(e) => {
-                  const key = getEventKey(e);
-                  if(e.isManual) setManualEvents(p => p.filter(me => me.id !== e.id));
-                  else setDeletedKeys(p => [...p, key]);
-                }} 
-              />
-            )}
-            {activeTab === 'settings' && (
-              <SettingsView 
-                onUpdate={handleFetchCustomData} 
-                onReset={handleReset}
-                onRestore={() => setDeletedKeys([])}
-                onExport={() => {
-                  navigator.clipboard.writeText(JSON.stringify({manualEvents, deletedKeys}));
-                  alert("데이터가 복사되었습니다.");
-                }}
-                onImport={(s) => {
-                  try {
-                    const d = JSON.parse(s);
-                    setManualEvents(d.manualEvents || []);
-                    setDeletedKeys(d.deletedKeys || []);
-                    alert("성공적으로 가져왔습니다.");
-                  } catch(e) { alert("형식이 잘못되었습니다."); }
-                }}
-                currentUrl={localStorage.getItem('custom_csv_url') || ''} 
-              />
-            )}
-          </div>
-        )}
+      <main className="max-w-[1800px] mx-auto p-10">
+        {activeTab === 'dashboard' && <DashboardView stats={stats} data={data} />}
+        {activeTab === 'calendar' && <div className="max-w-6xl mx-auto"><CalendarView data={data} /></div>}
+        {activeTab === 'list' && <ListView data={data} onAddEvent={(e) => setManualEvents(p => [...p, {...e, id: Date.now().toString(), isManual: true}])} onDeleteEvent={(e) => setDeletedKeys(p => [...p, getEventKey(e)])} />}
+        {activeTab === 'settings' && <SettingsView onUpdate={handleFetchCustomData} onReset={() => localStorage.clear()} onRestore={() => setDeletedKeys([])} onExport={() => {}} onImport={() => {}} currentUrl="" />}
       </main>
     </div>
   );
