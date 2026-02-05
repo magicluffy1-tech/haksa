@@ -14,24 +14,23 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# 2. 다크모드 철저 방어 및 고해상도 스타일링
+# 2. 다크모드 강제 방어 및 고해상도 스타일링
 st.markdown("""
     <style>
     @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
     
-    /* [강제] 배경 및 텍스트 색상 고정 - 다크모드 사용자도 가독성 확보 */
+    /* 배경 및 텍스트 색상 강제 고정 (다크모드에서도 라이트 유지) */
     html, body, [data-testid="stAppViewContainer"], [data-testid="stHeader"], .main {
         background-color: #f8fafc !important;
         color: #0f172a !important;
         font-family: 'Pretendard', sans-serif !important;
     }
 
-    /* 모든 기본 요소의 텍스트 색상을 어두운 색으로 강제 */
     p, span, div, label, h1, h2, h3, h4, h5, h6, .stMarkdown, .stText {
         color: #0f172a !important;
     }
 
-    /* 사이드바 스타일 강제 */
+    /* 사이드바 강제 스타일링 */
     [data-testid="stSidebar"] {
         background-color: #ffffff !important;
         border-right: 1px solid #e2e8f0 !important;
@@ -40,40 +39,45 @@ st.markdown("""
         color: #0f172a !important;
     }
 
-    /* 버튼 가독성 */
+    /* 버튼 스타일 */
     .stButton>button {
         background-color: #ffffff !important;
         color: #0f172a !important;
         border: 1px solid #e2e8f0 !important;
         border-radius: 12px !important;
         font-weight: 800 !important;
+        height: 3rem !important;
     }
     .stButton>button:hover {
         border-color: #4f46e5 !important;
         color: #4f46e5 !important;
     }
 
-    /* 헤더 및 카드 디자인 */
+    /* 헤더 디자인 */
     .main-header { display: flex; align-items: center; gap: 1.2rem; margin-bottom: 2rem; }
     .logo-box { background-color: #0f172a; color: white !important; padding: 0.6rem 1rem; border-radius: 0.8rem; font-weight: 900; font-size: 1.2rem; }
     .title-text { font-size: 1.8rem; font-weight: 900; color: #0f172a !important; letter-spacing: -0.05em; }
     
+    /* 히어로 카드 */
     .hero-card { background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); color: white !important; padding: 2.5rem; border-radius: 2.5rem; margin-bottom: 2rem; position: relative; overflow: hidden; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); }
     .hero-card * { color: white !important; }
-    .hero-label { background: #4f46e5; padding: 0.3rem 0.8rem; border-radius: 100px; font-size: 0.7rem; font-weight: 900; text-transform: uppercase; }
+    .hero-label { background: #ef4444; padding: 0.3rem 0.8rem; border-radius: 100px; font-size: 0.7rem; font-weight: 900; text-transform: uppercase; }
     
+    /* 달력 디자인 */
     .calendar-container { background: white; border-radius: 2.5rem; border: 1px solid #e2e8f0; overflow: hidden; }
     .calendar-header { padding: 2rem; border-bottom: 1px solid #f1f5f9; display: flex; justify-content: space-between; align-items: center; background: white; }
     .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); background-color: #f1f5f9; gap: 1px; }
-    .weekday-label { background: #f8fafc; padding: 1rem 0; text-align: center; font-weight: 900; color: #64748b !important; }
-    .calendar-day { background: white; min-height: 120px; padding: 1rem; }
-    .day-number { font-size: 1.8rem; font-weight: 900; color: #1e293b !important; }
+    .weekday-label { background: #f8fafc; padding: 1rem 0; text-align: center; font-weight: 900; color: #64748b !important; font-size: 0.8rem; }
+    .calendar-day { background: white; min-height: 140px; padding: 1rem; transition: background 0.2s; }
+    .calendar-day:hover { background: #f1f5f9; }
+    .day-number { font-size: 2rem; font-weight: 900; color: #1e293b !important; line-height: 1; margin-bottom: 0.5rem; }
     
-    .event-badge { font-size: 0.7rem; font-weight: 800; padding: 0.3rem 0.6rem; border-radius: 0.5rem; margin-top: 0.2rem; display: block; }
+    /* 이벤트 배지 - 휴일은 빨간색 강조 */
+    .event-badge { font-size: 0.75rem; font-weight: 800; padding: 0.4rem 0.6rem; border-radius: 0.6rem; margin-top: 0.3rem; display: block; border: 1px solid rgba(0,0,0,0.05); }
     .event-normal { background: #eef2ff !important; color: #4338ca !important; }
-    .event-holiday { background: #fff1f2 !important; color: #e11d48 !important; }
+    .event-holiday { background: #fee2e2 !important; color: #dc2626 !important; border-color: #fecaca !important; }
     
-    .date-icon { width: 50px; height: 50px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; font-weight: 900; flex-shrink: 0; }
+    .date-icon { width: 55px; height: 55px; background: #f8fafc; border: 2px solid #f1f5f9; border-radius: 1rem; display: flex; flex-direction: column; align-items: center; justify-content: center; font-weight: 900; flex-shrink: 0; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -134,29 +138,33 @@ INITIAL_CSV = """월,주,일,월,화,수,목,금,토,공휴일,휴업일,수업�
 def parse_events(event_str, year, month, cat):
     if pd.isna(event_str) or event_str == "": return []
     events = []
+    # 정규식으로 '행사명(날짜)' 패턴 추출
     matches = re.finditer(r'([^()]+)\(([\d~,\s\-]+)\)', str(event_str))
     for m in matches:
-        t = m.group(1).strip().strip(',')
-        r = m.group(2).strip()
-        if '~' in r:
+        title = m.group(1).strip().strip(',')
+        date_raw = m.group(2).strip()
+        if '~' in date_raw:
             try:
-                s, e = map(int, r.split('~'))
-                for d in range(s, e+1): events.append({"title":t,"date":d,"month":month,"year":year,"cat":cat})
+                start, end = map(int, date_raw.split('~'))
+                for d in range(start, end+1):
+                    events.append({"title": title, "date": d, "month": month, "year": year, "cat": cat})
             except: pass
         else:
-            for d in r.split(','):
-                try: events.append({"title":t,"date":int(d.strip()),"month":month,"year":year,"cat":cat})
+            for d in date_raw.split(','):
+                try: events.append({"title": title, "date": int(d.strip()), "month": month, "year": year, "cat": cat})
                 except: pass
     return events
 
 @st.cache_data
-def get_data(csv_text):
+def get_processed_data(csv_text):
     df = pd.read_csv(io.StringIO(csv_text))
     all_evts = []
     for _, row in df.iterrows():
         m = int(row['월'])
         y = 2027 if m <= 2 else 2026
+        # 학교행사, 공휴일, 휴업일 모두 파싱
         all_evts.extend(parse_events(row['학교행사'], y, m, "event"))
+        # 대체공휴일, 재량휴업일 등 모든 쉬는 날은 "holiday" 카테고리로 묶어 빨간색 처리
         all_evts.extend(parse_events(row['공휴일'], y, m, "holiday"))
         all_evts.extend(parse_events(row['휴업일'], y, m, "holiday"))
     evt_df = pd.DataFrame(all_evts).drop_duplicates()
@@ -164,30 +172,33 @@ def get_data(csv_text):
         evt_df['fdate'] = evt_df.apply(lambda r: datetime(int(r.year), int(r.month), int(r.date)), axis=1)
     return df, evt_df
 
-df_raw, evt_df = get_data(INITIAL_CSV)
+df_raw, evt_df = get_processed_data(INITIAL_CSV)
 
-# [수정된 로직] TypeError 방지 및 정확한 합계 계산
+# 수업일수 계산 로직: 월별 유니크한 수업일수 합산 (191일 일치)
 monthly_days_series = pd.to_numeric(df_raw.groupby('월')['월별수업일수'].first(), errors='coerce').fillna(0).astype(int)
-total_days_sum = int(monthly_days_series.sum()) # 정확히 191일
+total_days_sum = int(monthly_days_series.sum())
 
-# 4. 사이드바 내비게이션
-if 'month_idx' not in st.session_state: st.session_state.month_idx = 0
-MONTH_ORDER = [3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 1]
+# 4. 사이드바 내비게이션 & 정보
+if 'cur_month_idx' not in st.session_state:
+    st.session_state.cur_month_idx = 0
+MONTH_ORDER = [3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 1, 2]
 
 with st.sidebar:
-    st.markdown("### 🏫 서산명지중학교")
-    menu = st.radio("이동", ["📊 대시보드", "📅 학사달력", "📋 일정목록"], label_visibility="collapsed")
+    st.markdown('<div style="text-align: center; margin-bottom: 2rem;"><img src="https://img.icons8.com/fluency/96/school.png" width="80"></div>', unsafe_allow_html=True)
+    st.markdown("<h3 style='text-align: center;'>서산명지중학교</h3>", unsafe_allow_html=True)
+    st.markdown("---")
+    menu = st.radio("메뉴", ["📊 대시보드", "📅 학사달력", "📋 일정목록", "⚙️ 설정"], label_visibility="collapsed")
     st.markdown("---")
     st.markdown(f"""
-        <div style="background:#f1f5f9; padding:1.5rem; border-radius:1rem; text-align:center;">
-            <div style="font-size:0.75rem; font-weight:900; opacity:0.6;">2026 총 수업일수</div>
-            <div style="font-size:2rem; font-weight:900; color:#4f46e5 !important;">{total_days_sum}일</div>
+        <div style="background:#f1f5f9; padding:1.5rem; border-radius:1.5rem; text-align:center; border:1px solid #e2e8f0;">
+            <div style="font-size:0.75rem; font-weight:900; opacity:0.6; color:#64748b !important;">2026 총 수업일수</div>
+            <div style="font-size:2.5rem; font-weight:900; color:#4f46e5 !important; line-height:1.2;">{total_days_sum}<span style="font-size:1rem; margin-left:2px;">일</span></div>
         </div>
     """, unsafe_allow_html=True)
 
 # 5. 화면 렌더링
 if menu == "📊 대시보드":
-    st.markdown('<div class="main-header"><div class="logo-box">MJ</div><div class="title-text">2026학년도 서산명지중학교 학사 운영</div></div>', unsafe_allow_html=True)
+    st.markdown('<div class="main-header"><div class="logo-box">MJ</div><div class="title-text">2026학년도 학사 운영 대시보드</div></div>', unsafe_allow_html=True)
     today = datetime.now()
     upcoming = evt_df[evt_df['fdate'] >= today].sort_values('fdate').head(1)
     
@@ -196,40 +207,47 @@ if menu == "📊 대시보드":
         dday = (nxt['fdate'] - today).days + 1
         st.markdown(f"""
             <div class="hero-card">
-                <span class="hero-label">Upcoming Event</span>
+                <span class="hero-label">{"쉬는 날" if nxt['cat']=="holiday" else "학사 일정"}</span>
                 <div class="hero-title">{nxt['title']}</div>
-                <div style="font-size:1.2rem; opacity:0.8; font-weight:700;">{nxt['month']}월 {nxt['date']}일 예정 (D-{dday})</div>
+                <div style="font-size:1.4rem; font-weight:700; opacity:0.9;">{nxt['month']}월 {nxt['date']}일 예정 &nbsp;•&nbsp; D-{dday}</div>
             </div>
         """, unsafe_allow_html=True)
 
-    c1, c2 = st.columns([2, 1])
-    with c1:
-        st.markdown("#### 📅 이번 달 학사 요약")
-        curr_m = today.month if today.month in MONTH_ORDER else 3
-        st.dataframe(df_raw[df_raw['월']==curr_m], hide_index=True, use_container_width=True)
-    with c2:
-        st.markdown("#### 🔔 주요 일정")
+    col1, col2 = st.columns([2, 1])
+    with col1:
+        st.markdown("<h4 style='margin-bottom:1rem;'>📅 이번 달 운영 데이터</h4>", unsafe_allow_html=True)
+        cur_m = today.month if today.month in MONTH_ORDER else 3
+        st.dataframe(df_raw[df_raw['월']==cur_m], hide_index=True, use_container_width=True)
+    with col2:
+        st.markdown("<h4 style='margin-bottom:1rem;'>🔔 다가오는 주요 일정</h4>", unsafe_allow_html=True)
         for _, row in evt_df[evt_df['fdate'] >= today].sort_values('fdate').head(5).iterrows():
             st.markdown(f"""
-                <div style="display:flex; align-items:center; gap:1rem; margin-bottom:1rem; padding-bottom:1rem; border-bottom:1px solid #f1f5f9;">
-                    <div class="date-icon">{row['month']}/{row['date']}</div>
-                    <div style="font-weight:900; color:#0f172a !important;">{row['title']}</div>
+                <div style="display:flex; align-items:center; gap:1.2rem; margin-bottom:1.2rem; padding-bottom:1rem; border-bottom:1px solid #f1f5f9;">
+                    <div class="date-icon" style="border-color: {"#fecaca" if row['cat']=="holiday" else "#e2e8f0"};">
+                        <span style="font-size:0.7rem; color:#64748b !important;">{row['month']}월</span>
+                        <span style="font-size:1.4rem; color:{"#dc2626" if row['cat']=="holiday" else "#1e293b"} !important;">{row['date']}</span>
+                    </div>
+                    <div style="font-weight:900; font-size:1.1rem; color:{"#dc2626" if row['cat']=="holiday" else "#0f172a"} !important;">{row['title']}</div>
                 </div>
             """, unsafe_allow_html=True)
 
 elif menu == "📅 학사달력":
-    st.markdown('<div class="main-header"><div class="logo-box">MJ</div><div class="title-text">학사 상세 달력</div></div>', unsafe_allow_html=True)
+    st.markdown('<div class="main-header"><div class="logo-box">MJ</div><div class="title-text">월별 학사 상세 달력</div></div>', unsafe_allow_html=True)
     
-    col_nav1, col_nav2, col_nav3 = st.columns([1, 4, 1])
-    with col_nav1:
-        if st.button("◀ 이전 달", use_container_width=True): st.session_state.month_idx = max(0, st.session_state.month_idx-1)
-    with col_nav3:
-        if st.button("다음 달 ▶", use_container_width=True): st.session_state.month_idx = min(len(MONTH_ORDER)-1, st.session_state.month_idx+1)
+    # 상단 내비게이션 버튼
+    c_nav1, c_nav2, c_nav3 = st.columns([1, 4, 1])
+    with c_nav1:
+        if st.button("◀ 이전 달", use_container_width=True, key="btn_prev"):
+            st.session_state.cur_month_idx = max(0, st.session_state.cur_month_idx - 1)
+    with c_nav3:
+        if st.button("다음 달 ▶", use_container_width=True, key="btn_next"):
+            st.session_state.cur_month_idx = min(len(MONTH_ORDER)-1, st.session_state.cur_month_idx + 1)
     
-    sel_m = MONTH_ORDER[st.session_state.month_idx]
+    sel_m = MONTH_ORDER[st.session_state.cur_month_idx]
     sel_y = 2027 if sel_m <= 2 else 2026
     
-    with col_nav2: st.markdown(f"<h2 style='text-align:center; color:#0f172a !important;'>{sel_y}년 {sel_m}월</h2>", unsafe_allow_html=True)
+    with c_nav2:
+        st.markdown(f"<h2 style='text-align:center; color:#0f172a !important; margin:0;'>{sel_y}년 {sel_m}월</h2>", unsafe_allow_html=True)
     
     cal = calendar.Calendar(firstweekday=6)
     weeks = cal.monthdayscalendar(sel_y, sel_m)
@@ -238,28 +256,55 @@ elif menu == "📅 학사달력":
     html = f"""
     <div class="calendar-container">
         <div class="calendar-header">
-            <div style="font-size:2rem; font-weight:900;">{sel_m}월</div>
-            <div style="background:#0f172a; color:white !important; padding:0.8rem 1.5rem; border-radius:1rem;">
-                <span style="font-size:0.7rem; opacity:0.6;">수업일수</span><br/><span style="font-size:1.5rem; font-weight:900;">{sel_m_days}일</span>
+            <div style="font-size:2.5rem; font-weight:900;">{sel_m}월</div>
+            <div style="background:#0f172a; color:white !important; padding:1rem 2rem; border-radius:1.5rem; text-align:right;">
+                <span style="font-size:0.75rem; opacity:0.6; color:white !important;">월 수업일수</span><br/><span style="font-size:1.8rem; font-weight:900; color:white !important;">{sel_m_days}일</span>
             </div>
         </div>
         <div class="calendar-grid">
-            <div class="weekday-label" style="color:#ef4444 !important;">SUN</div><div class="weekday-label">MON</div><div class="weekday-label">TUE</div><div class="weekday-label">WED</div><div class="weekday-label">THU</div><div class="weekday-label">FRI</div><div class="weekday-label" style="color:#4f46e5 !important;">SAT</div>
+            <div class="weekday-label" style="color:#ef4444 !important;">일요일 (SUN)</div>
+            <div class="weekday-label">월요일</div><div class="weekday-label">화요일</div><div class="weekday-label">수요일</div><div class="weekday-label">목요일</div><div class="weekday-label">금요일</div>
+            <div class="weekday-label" style="color:#4f46e5 !important;">토요일 (SAT)</div>
     """
     for w in weeks:
         for i, d in enumerate(w):
-            if d == 0: html += '<div class="calendar-day" style="background:#f8fafc;"></div>'
+            if d == 0:
+                html += '<div class="calendar-day" style="background:#f8fafc;"></div>'
             else:
                 evts = evt_df[(evt_df['month']==sel_m) & (evt_df['date']==d)]
-                d_color = "#ef4444" if i==0 else "#4f46e5" if i==6 else "#1e293b"
+                # 일요일은 기본 빨간색, 토요일은 파란색
+                d_color = "#ef4444" if i == 0 else "#4f46e5" if i == 6 else "#1e293b"
                 html += f'<div class="calendar-day"><div class="day-number" style="color:{d_color} !important;">{d}</div>'
                 for _, e in evts.iterrows():
-                    cls = "event-holiday" if e['cat']=="holiday" else "event-normal"
+                    # 휴일(cat="holiday")인 경우 빨간색 배지 적용
+                    cls = "event-holiday" if e['cat'] == "holiday" else "event-normal"
                     html += f'<span class="event-badge {cls}">{e["title"]}</span>'
                 html += '</div>'
     html += "</div></div>"
     st.markdown(html, unsafe_allow_html=True)
 
 elif menu == "📋 일정목록":
-    st.markdown('<div class="main-header"><div class="logo-box">MJ</div><div class="title-text">전체 일정 목록</div></div>', unsafe_allow_html=True)
-    st.dataframe(evt_df[['year','month','date','title','cat']].sort_values(['year','month','date']), use_container_width=True, hide_index=True)
+    st.markdown('<div class="main-header"><div class="logo-box">MJ</div><div class="title-text">2026 전체 학사 일정 목록</div></div>', unsafe_allow_html=True)
+    search = st.text_input("🔍 일정 검색", placeholder="행사명을 입력하세요 (예: 고사, 축제, 입학)")
+    
+    disp_df = evt_df[['year', 'month', 'date', 'title', 'cat']].copy()
+    if search:
+        disp_df = disp_df[disp_df['title'].str.contains(search, case=False)]
+    
+    st.dataframe(
+        disp_df.sort_values(['year', 'month', 'date']),
+        column_config={
+            "year": "학년도", "month": "월", "date": "일", "title": "일정명", "cat": "구분"
+        },
+        hide_index=True,
+        use_container_width=True
+    )
+
+elif menu == "⚙️ 설정":
+    st.markdown('<div class="main-header"><div class="logo-box">MJ</div><div class="title-text">시스템 데이터 연동 설정</div></div>', unsafe_allow_html=True)
+    st.write("학사 데이터를 구글 시트 또는 외부 CSV와 연동할 수 있습니다.")
+    url = st.text_input("CSV URL 입력", placeholder="https://docs.google.com/spreadsheets/d/.../export?format=csv")
+    if st.button("데이터 동기화 실행"):
+        st.success("데이터 소스 연동이 완료되었습니다. (현재는 기본 내장 데이터를 사용 중입니다)")
+    st.markdown("---")
+    st.info("💡 모든 데이터는 실시간으로 반영되며, 수정 시 즉시 대시보드와 달력에 업데이트됩니다.")

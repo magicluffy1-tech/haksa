@@ -46,7 +46,6 @@ const CalendarView: React.FC<Props> = ({ data, isMini = false }) => {
 
   return (
     <div className="bg-white rounded-[3.5rem] shadow-2xl border border-slate-200 overflow-hidden flex flex-col min-h-[950px]">
-      {/* Header: Super Large Month Display */}
       <div className="flex items-center justify-between p-12 border-b border-slate-100 bg-white">
         <div className="flex items-center gap-10">
           <div className="flex flex-col">
@@ -70,7 +69,6 @@ const CalendarView: React.FC<Props> = ({ data, isMini = false }) => {
         </div>
       </div>
 
-      {/* Week Labels: Large and Clear */}
       <div className="grid grid-cols-7 border-b border-slate-100 bg-slate-50">
         {daysLabels.map((label, i) => (
           <div key={label} className={`py-6 text-center text-sm lg:text-base font-black uppercase tracking-[0.2em] ${i === 0 ? 'text-rose-500' : i === 6 ? 'text-indigo-600' : 'text-slate-500'}`}>
@@ -79,7 +77,6 @@ const CalendarView: React.FC<Props> = ({ data, isMini = false }) => {
         ))}
       </div>
 
-      {/* Grid: High Visibility Cells */}
       <div className="grid grid-cols-7 flex-grow auto-rows-fr gap-px bg-slate-200">
         {calendarGrid.map((week, wIdx) => (
           <React.Fragment key={wIdx}>
@@ -98,7 +95,7 @@ const CalendarView: React.FC<Props> = ({ data, isMini = false }) => {
                         {uniqueEvents.map((evt, eIdx) => (
                           <div key={eIdx} className={`text-[12px] lg:text-[13px] leading-tight px-3.5 py-2.5 rounded-[1.2rem] border-2 font-black shadow-sm ${
                             evt.category === EventCategory.HOLIDAY 
-                              ? 'bg-rose-50 text-rose-700 border-rose-100' 
+                              ? 'bg-rose-100 text-rose-700 border-rose-200' 
                               : 'bg-indigo-50 text-indigo-700 border-indigo-100'
                           }`}>
                             {evt.title}
