@@ -16,6 +16,7 @@ const App: React.FC = () => {
   const [toastMsg, setToastMsg] = useState('');
   const [loading, setLoading] = useState(false);
   const [lastSyncStatus, setLastSyncStatus] = useState<'success' | 'error' | 'idle'>('idle');
+  const [lastSyncTime, setLastSyncTime] = useState<string>('');
 
   const [csvContent, setCsvContent] = useState<string>(() => {
     return localStorage.getItem('smj_csv_content') || INITIAL_CSV_DATA;
@@ -43,16 +44,15 @@ const App: React.FC = () => {
     setLoading(true);
     try {
       const res = await fetch(`${MASTER_SHEET_URL}&t=${Date.now()}`, {
-        mode: 'cors',
-        headers: { 'Content-Type': 'text/csv' }
+        mode: 'cors'
       });
       if (res.ok) {
         const text = await res.text();
-        if (text.length > 100) { // 데이터가 너무 짧으면 비정상으로 간주
+        if (text.length > 100) {
           setCsvContent(text);
           localStorage.setItem('smj_csv_content', text);
           setLastSyncStatus('success');
-          console.log("Sync success");
+          setLastSyncTime(new Date().toLocaleTimeString());
         } else {
           throw new Error("Invalid CSV length");
         }
@@ -62,7 +62,7 @@ const App: React.FC = () => {
     } catch (e) {
       console.error("Master sync failed", e);
       setLastSyncStatus('error');
-      triggerToast('마스터 데이터 동기화에 실패했습니다. (시트 게시 확인 필요)');
+      triggerToast('마스터 데이터 동기화에 실패했습니다.');
     } finally {
       setLoading(false);
     }
@@ -79,7 +79,6 @@ const App: React.FC = () => {
 
   const processedData = useMemo(() => {
     let raw = parseCSVToWeeklyData(csvContent);
-    // 동기화 실패했는데 로컬 캐시도 없으면 기본값 사용
     if (raw.length === 0) {
       raw = parseCSVToWeeklyData(INITIAL_CSV_DATA);
     }
@@ -130,18 +129,18 @@ const App: React.FC = () => {
               <div className="flex items-center gap-3">
                 <h1 className="text-2xl font-black tracking-tight text-[#0f172a]">2026학년도 서산명지중학교 학사 운영</h1>
                 {lastSyncStatus === 'success' ? (
-                  <span className="bg-emerald-600 text-white text-[10px] font-black px-3 py-1 rounded-full flex items-center gap-2">
-                    <span className="w-1.5 h-1.5 bg-white rounded-full animate-pulse"></span> 동기화 완료
-                  </span>
+                  <div className="flex flex-col">
+                    <span className="bg-emerald-600 text-white text-[10px] font-black px-3 py-1 rounded-full flex items-center gap-2 w-fit">
+                      <span className="w-1.5 h-1.5 bg-white rounded-full animate-pulse"></span> 동기화 완료
+                    </span>
+                    <span className="text-[9px] text-emerald-600 font-bold mt-0.5 ml-1">최근: {lastSyncTime}</span>
+                  </div>
                 ) : lastSyncStatus === 'error' ? (
                   <span className="bg-rose-600 text-white text-[10px] font-black px-3 py-1 rounded-full">동기화 실패</span>
                 ) : (
                   <span className="bg-slate-200 text-slate-500 text-[10px] font-black px-3 py-1 rounded-full">동기화 준비</span>
                 )}
               </div>
-              <p className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-widest">
-                Source: Google Sheets (Cloud Master)
-              </p>
             </div>
           </div>
           <nav className="flex items-center gap-2 bg-slate-100 p-1.5 rounded-2xl">
