@@ -20,107 +20,73 @@ const SettingsView: React.FC<Props> = ({ onUpdate, onReset, onRestore, onExport,
     onUpdate(urlInput.trim());
   };
 
-  const handleImportSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!importInput.trim()) {
-      alert('복원할 데이터 코드를 입력해주세요.');
-      return;
-    }
-    onImport(importInput.trim());
-    setImportInput('');
-  };
-
   return (
-    <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div className="bg-white rounded-3xl shadow-sm border border-slate-200 p-8">
-        <h2 className="text-2xl font-black text-slate-900 mb-2">⚙️ 학사 데이터 시스템 관리</h2>
-        <p className="text-slate-500 font-medium leading-relaxed">
-          실시간 데이터 연동 및 개인화된 학사 운영 설정을 관리합니다.<br/>
-          수정한 내용은 브라우저에 자동 저장되어 실시간으로 대시보드에 반영됩니다.
-        </p>
+    <div className="max-w-5xl mx-auto space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <div className="bg-indigo-600 rounded-[3rem] p-12 text-white shadow-2xl relative overflow-hidden">
+        <div className="relative z-10">
+          <h2 className="text-4xl font-black mb-4 tracking-tighter">🔗 모두와 공유하는 대시보드 만들기</h2>
+          <p className="text-indigo-100 text-lg font-bold leading-relaxed max-w-2xl">
+            구글 스프레드시트와 연동하면 내가 수정한 내용이 모든 사용자에게 실시간으로 공유됩니다.<br/>
+            선생님들, 학생들과 함께 동일한 학사 일정을 확인하세요.
+          </p>
+        </div>
+        <div className="absolute -right-20 -bottom-20 text-[15rem] font-black text-white/10 italic select-none">SYNC</div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-        {/* Left: Sync & Backup */}
-        <div className="space-y-8">
-          <section className="bg-white p-8 rounded-3xl shadow-sm border border-slate-200 space-y-6 hover:border-blue-300 transition-colors">
-            <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest">구글 시트 실시간 연동</h3>
-            <form onSubmit={handleSubmit} className="space-y-3">
-              <input 
-                type="text" 
-                value={urlInput}
-                onChange={(e) => setUrlInput(e.target.value)}
-                placeholder="게시된 CSV URL 주소 (https://...)"
-                className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-blue-500/10 outline-none font-bold placeholder:font-medium"
-              />
-              <button type="submit" className="w-full py-4 bg-blue-600 text-white rounded-2xl font-black hover:bg-blue-700 transition-all shadow-lg shadow-blue-100 flex items-center justify-center gap-2 active:scale-[0.98]">
-                🔄 서버 데이터 즉시 동기화
-              </button>
-            </form>
-          </section>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+        {/* 마스터 데이터 연동 */}
+        <section className="bg-white p-10 rounded-[3rem] shadow-xl border border-slate-200 space-y-8">
+          <div>
+            <span className="text-xs font-black text-indigo-600 bg-indigo-50 px-3 py-1 rounded-full uppercase tracking-widest mb-4 inline-block">Step 1. 서버 연동</span>
+            <h3 className="text-2xl font-black text-slate-900">구글 시트 CSV 주소 등록</h3>
+          </div>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <input 
+              type="text" 
+              value={urlInput}
+              onChange={(e) => setUrlInput(e.target.value)}
+              placeholder="구글 시트 웹 게시 CSV URL (https://...)"
+              className="w-full px-6 py-5 bg-slate-50 border-2 border-slate-100 rounded-[1.5rem] focus:border-indigo-600 outline-none font-bold transition-all"
+            />
+            <button type="submit" className="w-full py-5 bg-slate-900 text-white rounded-[1.5rem] font-black hover:bg-black transition-all shadow-xl active:scale-95">
+              🔄 마스터 데이터 동기화
+            </button>
+          </form>
+          <p className="text-xs text-slate-400 font-bold leading-relaxed italic">
+            * 구글 시트의 [파일 > 공유 > 웹에 게시 > CSV 형식]으로 선택한 뒤 생성된 주소를 입력하세요.
+          </p>
+        </section>
 
-          <section className="bg-white p-8 rounded-3xl shadow-sm border border-slate-200 space-y-6 hover:border-slate-400 transition-colors">
-            <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest">데이터 내보내기 (백업)</h3>
-            <div className="space-y-4">
-              <p className="text-xs text-slate-500 leading-relaxed font-medium">
-                사용자가 수동으로 기록한 일정, 숨김 처리한 항목, 현재 적용된 전체 데이터를 코드로 변환하여 복사합니다.
-              </p>
-              <button 
-                onClick={onExport}
-                className="w-full py-4 bg-slate-900 text-white rounded-2xl font-black hover:bg-black transition-all flex items-center justify-center gap-2 active:scale-[0.98]"
-              >
-                📥 설정 데이터 클립보드 복사
-              </button>
-            </div>
-          </section>
-        </div>
-
-        {/* Right: Import & Reset */}
-        <div className="space-y-8">
-          <section className="bg-white p-8 rounded-3xl shadow-sm border border-slate-200 space-y-6 hover:border-emerald-300 transition-colors">
-            <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest">데이터 가져오기 (복원)</h3>
-            <form onSubmit={handleImportSubmit} className="space-y-3">
-              <textarea 
-                value={importInput}
-                onChange={(e) => setImportInput(e.target.value)}
-                placeholder="복사해둔 백업 코드를 여기에 붙여넣으세요"
-                className="w-full h-32 px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-emerald-500/10 outline-none font-bold text-xs resize-none"
-              />
-              <button type="submit" className="w-full py-4 bg-emerald-600 text-white rounded-2xl font-black hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-100 active:scale-[0.98]">
-                ✅ 데이터 복원 및 적용
-              </button>
-            </form>
-          </section>
-
-          <section className="bg-white p-8 rounded-3xl shadow-sm border border-slate-200 space-y-6">
-            <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest">시스템 제어</h3>
-            <div className="grid grid-cols-1 gap-3">
-              <button 
-                onClick={onRestore}
-                className="w-full py-3 bg-white text-blue-600 rounded-2xl font-black border border-blue-200 hover:bg-blue-50 transition-all text-sm active:scale-[0.98]"
-              >
-                숨긴 일정 모두 다시 표시
-              </button>
-              <button 
-                onClick={onReset}
-                className="w-full py-3 bg-white text-red-600 rounded-2xl font-black border border-red-200 hover:bg-red-50 transition-all text-sm active:scale-[0.98]"
-              >
-                ⚠️ 데이터 전체 초기화
-              </button>
-            </div>
-          </section>
-        </div>
+        {/* 공유 링크 생성 */}
+        <section className="bg-white p-10 rounded-[3rem] shadow-xl border border-slate-200 space-y-8 flex flex-col justify-between">
+          <div>
+            <span className="text-xs font-black text-emerald-600 bg-emerald-50 px-3 py-1 rounded-full uppercase tracking-widest mb-4 inline-block">Step 2. 링크 공유</span>
+            <h3 className="text-2xl font-black text-slate-900">공용 접속 링크 복사</h3>
+            <p className="text-sm text-slate-500 font-bold mt-4 leading-relaxed">
+              위에서 등록한 데이터가 자동으로 포함된 [마스터 링크]를 생성합니다. 이 링크를 다른 사람들에게 전달하면 모두가 동일한 화면을 보게 됩니다.
+            </p>
+          </div>
+          <button 
+            onClick={onExport}
+            className="w-full py-5 bg-emerald-600 text-white rounded-[1.5rem] font-black hover:bg-emerald-700 transition-all shadow-xl shadow-emerald-100 flex items-center justify-center gap-3 active:scale-95"
+          >
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" /></svg>
+            마스터 공유 링크 복사하기
+          </button>
+        </section>
       </div>
-      
-      <div className="bg-blue-50 border border-blue-100 p-8 rounded-[2rem]">
-        <h4 className="text-sm font-black text-blue-900 mb-3 flex items-center gap-2">
-          <span className="w-6 h-6 bg-blue-200 text-blue-700 rounded-lg flex items-center justify-center text-xs">!</span>
-          실시간 반영 안내
-        </h4>
-        <p className="text-xs text-blue-700 font-bold leading-relaxed opacity-80">
-          모든 변경 사항은 브라우저의 로컬 스토리지에 즉시 저장됩니다. 별도의 '저장' 버튼을 누르지 않아도 새로고침 시 데이터가 유지됩니다.<br/>
-          다만, 브라우저 방문 기록을 지우거나 다른 컴퓨터에서 접속할 경우에는 '데이터 내보내기' 코드를 통해 수동으로 옮겨주셔야 합니다.
-        </p>
+
+      <div className="bg-white p-10 rounded-[3rem] border border-slate-200 shadow-sm flex items-center justify-between">
+        <div>
+          <h4 className="text-xl font-black text-slate-900">시스템 초기화</h4>
+          <p className="text-sm text-slate-400 font-bold mt-1">저장된 모든 로컬 데이터를 삭제하고 초기 상태로 되돌립니다.</p>
+        </div>
+        <button 
+          onClick={onReset}
+          className="px-10 py-4 bg-rose-50 text-rose-600 rounded-2xl font-black border border-rose-100 hover:bg-rose-100 transition-all"
+        >
+          전체 초기화
+        </button>
       </div>
     </div>
   );
