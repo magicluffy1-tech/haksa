@@ -8,15 +8,14 @@ import CalendarView from './components/CalendarView';
 import ListView from './components/ListView';
 import SettingsView from './components/SettingsView';
 
+const MASTER_SHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQkmtBdOTOknN9savB9c2xRwJPMsqG_9ruvfK3od_eTJOEWDA6-W9EGWU2xgzzdE8NhoIm1BMCmHyYK/pub?output=csv';
+
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TabType>('dashboard');
   const [showToast, setShowToast] = useState(false);
   const [toastMsg, setToastMsg] = useState('');
   const [loading, setLoading] = useState(false);
-
-  // 1. 데이터 소스 결정 (URL 파라미터 확인)
-  const queryParams = new URLSearchParams(window.location.search);
-  const sharedUrl = queryParams.get('source');
+  const [lastSyncStatus, setLastSyncStatus] = useState<'success' | 'error' | 'idle'>('idle');
 
   const [csvContent, setCsvContent] = useState<string>(() => {
     return localStorage.getItem('smj_csv_content') || INITIAL_CSV_DATA;
@@ -34,63 +33,58 @@ const App: React.FC = () => {
 
   const getEventKey = (e: SchoolEvent) => e.id || `${e.year}-${e.month}-${e.date}-${e.title}`;
 
-  // 2. 앱 실행 시 공유된 데이터가 있다면 즉시 동기화
-  useEffect(() => {
-    const initData = async () => {
-      if (sharedUrl) {
-        setLoading(true);
-        try {
-          const res = await fetch(sharedUrl);
-          if (res.ok) {
-            const text = await res.text();
-            setCsvContent(text);
-            localStorage.setItem('smj_csv_content', text);
-            localStorage.setItem('custom_csv_url', sharedUrl);
-            triggerToast('공유된 마스터 데이터와 동기화되었습니다.');
-          }
-        } catch (e) {
-          console.error("Shared data sync failed", e);
-        } finally {
-          setLoading(false);
-        }
-      }
-    };
-    initData();
-  }, [sharedUrl]);
-
-  // 3. 실시간 로컬 백업 (개인 작업용)
-  useEffect(() => {
-    localStorage.setItem('smj_manual_events', JSON.stringify(manualEvents));
-    localStorage.setItem('smj_deleted_keys', JSON.stringify(deletedKeys));
-    localStorage.setItem('smj_csv_content', csvContent);
-  }, [manualEvents, deletedKeys, csvContent]);
-
   const triggerToast = (msg: string) => {
     setToastMsg(msg);
     setShowToast(true);
     setTimeout(() => setShowToast(false), 3000);
   };
 
-  const handleFetchCustomData = async (url: string) => {
+  const syncMasterData = async () => {
     setLoading(true);
     try {
-      const res = await fetch(url);
-      if (!res.ok) throw new Error('불러오기 실패');
-      const text = await res.text();
-      setCsvContent(text);
-      localStorage.setItem('custom_csv_url', url);
-      triggerToast('데이터가 성공적으로 동기화되었습니다.');
-    } catch (err) {
-      alert('데이터 주소가 올바르지 않거나 접근 권한이 없습니다.');
+      const res = await fetch(`${MASTER_SHEET_URL}&t=${Date.now()}`, {
+        mode: 'cors',
+        headers: { 'Content-Type': 'text/csv' }
+      });
+      if (res.ok) {
+        const text = await res.text();
+        if (text.length > 100) { // 데이터가 너무 짧으면 비정상으로 간주
+          setCsvContent(text);
+          localStorage.setItem('smj_csv_content', text);
+          setLastSyncStatus('success');
+          console.log("Sync success");
+        } else {
+          throw new Error("Invalid CSV length");
+        }
+      } else {
+        throw new Error("Fetch failed");
+      }
+    } catch (e) {
+      console.error("Master sync failed", e);
+      setLastSyncStatus('error');
+      triggerToast('마스터 데이터 동기화에 실패했습니다. (시트 게시 확인 필요)');
     } finally {
       setLoading(false);
     }
   };
 
-  // 4. 데이터 가공 로직
+  useEffect(() => {
+    syncMasterData();
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem('smj_manual_events', JSON.stringify(manualEvents));
+    localStorage.setItem('smj_deleted_keys', JSON.stringify(deletedKeys));
+  }, [manualEvents, deletedKeys]);
+
   const processedData = useMemo(() => {
-    const baseData = parseCSVToWeeklyData(csvContent);
-    return baseData.map(week => {
+    let raw = parseCSVToWeeklyData(csvContent);
+    // 동기화 실패했는데 로컬 캐시도 없으면 기본값 사용
+    if (raw.length === 0) {
+      raw = parseCSVToWeeklyData(INITIAL_CSV_DATA);
+    }
+    
+    return raw.map(week => {
       const weekManualEvents = manualEvents.filter(me => 
         me.year === week.year && me.month === week.month && week.days.includes(me.date)
       );
@@ -124,8 +118,6 @@ const App: React.FC = () => {
     };
   }, [processedData]);
 
-  const currentUrl = localStorage.getItem('custom_csv_url') || '';
-
   return (
     <div className="min-h-screen bg-[#f8fafc] text-[#0f172a] overflow-x-hidden select-none">
       <header className="bg-white border-b border-slate-200 sticky top-0 z-50">
@@ -137,18 +129,18 @@ const App: React.FC = () => {
             <div>
               <div className="flex items-center gap-3">
                 <h1 className="text-2xl font-black tracking-tight text-[#0f172a]">2026학년도 서산명지중학교 학사 운영</h1>
-                {sharedUrl || currentUrl ? (
-                  <span className="bg-indigo-600 text-white text-[10px] font-black px-3 py-1 rounded-full flex items-center gap-2">
-                    <span className="w-1.5 h-1.5 bg-white rounded-full animate-pulse"></span> 공용 서버 동기화 모드
+                {lastSyncStatus === 'success' ? (
+                  <span className="bg-emerald-600 text-white text-[10px] font-black px-3 py-1 rounded-full flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 bg-white rounded-full animate-pulse"></span> 동기화 완료
                   </span>
+                ) : lastSyncStatus === 'error' ? (
+                  <span className="bg-rose-600 text-white text-[10px] font-black px-3 py-1 rounded-full">동기화 실패</span>
                 ) : (
-                  <span className="bg-slate-100 text-slate-500 text-[10px] font-black px-3 py-1 rounded-full border border-slate-200">
-                    개인 로컬 모드
-                  </span>
+                  <span className="bg-slate-200 text-slate-500 text-[10px] font-black px-3 py-1 rounded-full">동기화 준비</span>
                 )}
               </div>
               <p className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-widest">
-                {sharedUrl ? 'Shared Source: 구글 시트 마스터 데이터' : 'Local Source: 브라우저 캐시 데이터'}
+                Source: Google Sheets (Cloud Master)
               </p>
             </div>
           </div>
@@ -163,42 +155,44 @@ const App: React.FC = () => {
       </header>
 
       <main className="max-w-[1800px] mx-auto p-10">
-        {activeTab === 'dashboard' && <DashboardView stats={stats} data={processedData} />}
-        {activeTab === 'calendar' && <div className="max-w-6xl mx-auto"><CalendarView data={processedData} /></div>}
-        {activeTab === 'list' && (
-          <ListView 
-            data={processedData} 
-            onAddEvent={(e) => {
-              setManualEvents(p => [...p, {...e, id: Date.now().toString(), isManual: true}]);
-              triggerToast('일정이 추가되었습니다.');
-            }} 
-            onDeleteEvent={(e) => {
-              setDeletedKeys(p => [...p, getEventKey(e)]);
-              triggerToast('일정이 숨김 처리되었습니다.');
-            }} 
-          />
-        )}
-        {activeTab === 'settings' && (
-          <SettingsView 
-            onUpdate={handleFetchCustomData} 
-            onReset={() => { if(confirm('모든 데이터가 초기화됩니다.')) { localStorage.clear(); window.location.href = window.location.origin + window.location.pathname; } }} 
-            onRestore={() => { setDeletedKeys([]); triggerToast('모든 일정을 복구했습니다.'); }} 
-            onExport={() => {
-              const url = currentUrl || '';
-              const shareLink = `${window.location.origin}${window.location.pathname}?source=${encodeURIComponent(url)}`;
-              navigator.clipboard.writeText(shareLink);
-              alert('모두에게 공유할 수 있는 [마스터 링크]가 복사되었습니다!');
-            }} 
-            onImport={(json) => {
-              try {
-                const b = JSON.parse(json);
-                if(b.manualEvents) setManualEvents(b.manualEvents);
-                if(b.deletedKeys) setDeletedKeys(b.deletedKeys);
-                alert('데이터 복구 완료');
-              } catch(e) { alert('코드 오류'); }
-            }} 
-            currentUrl={currentUrl} 
-          />
+        {processedData.length === 0 && !loading ? (
+          <div className="h-[60vh] flex flex-col items-center justify-center text-center">
+            <div className="text-6xl mb-6">⚠️</div>
+            <h2 className="text-3xl font-black text-slate-900 mb-2">데이터를 불러올 수 없습니다</h2>
+            <p className="text-slate-500 font-bold">구글 시트의 양식이 올바른지, 혹은 '웹에 게시'가 CSV 형식으로 설정되었는지 확인해주세요.</p>
+            <button onClick={syncMasterData} className="mt-8 px-8 py-4 bg-indigo-600 text-white rounded-2xl font-black shadow-xl">다시 시도하기</button>
+          </div>
+        ) : (
+          <>
+            {activeTab === 'dashboard' && <DashboardView stats={stats} data={processedData} />}
+            {activeTab === 'calendar' && <div className="max-w-6xl mx-auto"><CalendarView data={processedData} /></div>}
+            {activeTab === 'list' && (
+              <ListView 
+                data={processedData} 
+                onAddEvent={(e) => {
+                  setManualEvents(p => [...p, {...e, id: Date.now().toString(), isManual: true}]);
+                  triggerToast('내 브라우저에 임시 일정이 추가되었습니다.');
+                }} 
+                onDeleteEvent={(e) => {
+                  setDeletedKeys(p => [...p, getEventKey(e)]);
+                  triggerToast('일정이 내 화면에서 숨겨졌습니다.');
+                }} 
+              />
+            )}
+            {activeTab === 'settings' && (
+              <SettingsView 
+                onUpdate={syncMasterData} 
+                onReset={() => { if(confirm('설정을 초기화하시겠습니까?')) { localStorage.clear(); window.location.reload(); } }} 
+                onRestore={() => { setDeletedKeys([]); triggerToast('숨긴 일정을 모두 복구했습니다.'); }} 
+                onExport={() => {
+                  navigator.clipboard.writeText(window.location.href);
+                  alert('대시보드 접속 주소가 복사되었습니다.');
+                }} 
+                onImport={() => {}} 
+                currentUrl={MASTER_SHEET_URL} 
+              />
+            )}
+          </>
         )}
       </main>
       
