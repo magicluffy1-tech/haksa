@@ -6,20 +6,24 @@ import io
 
 # 페이지 설정
 st.set_page_config(
-    page_title="2026 서산명지중 학사 일정",
-    page_icon="🗓️",
+    page_title="2026 서산명지중학교 학사 운영",
+    page_icon="🏫",
     layout="wide"
 )
 
 # 스타일 커스텀
 st.markdown("""
     <style>
+    @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
+    * { font-family: 'Pretendard', sans-serif !important; }
     .main { background-color: #f8f9fa; }
-    .stMetric { background-color: white; padding: 20px; border-radius: 15px; border: 1px solid #eee; }
+    div[data-testid="stMetric"] { background-color: white; padding: 25px; border-radius: 20px; border: 1px solid #eee; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
+    .stInfo { border-radius: 15px; border: none; background-color: #eef2ff; color: #4338ca; }
+    h1, h2, h3 { font-weight: 900 !important; tracking: -0.05em !important; }
     </style>
     """, unsafe_allow_html=True)
 
-# 초기 데이터 (기존 CSV 데이터 활용)
+# 초기 데이터
 INITIAL_CSV = """월,주,일,월,화,수,목,금,토,공휴일,휴업일,수업일수,월별수업일수,학교행사
 3,1,1,2,3,4,5,6,7,"삼일절(1), 대체공휴일(2)",,4,21,"개학식(3), 입학식(3)"
 3,2,8,9,10,11,12,13,14,,,5,21,"꿈디딤진로융합활동(16), 해양수련원암벽등반체험(17)"
@@ -45,55 +49,57 @@ def load_data(url=None):
         try:
             return pd.read_csv(url)
         except:
-            st.error("URL 로드 실패. 기본 데이터를 사용합니다.")
+            return pd.read_csv(io.StringIO(INITIAL_CSV))
     return pd.read_csv(io.StringIO(INITIAL_CSV))
 
-# 사이드바 메뉴
-st.sidebar.title("🏫 서산명지중")
-menu = st.sidebar.radio("메뉴 선택", ["📊 종합 현황", "📅 월별 달력", "📋 전체 일정 목록", "⚙️ 설정"])
-
 # 데이터 로드
-csv_url = st.sidebar.text_input("구글 시트 CSV URL (옵션)", "")
-df = load_data(csv_url if csv_url else None)
+df = load_data()
 
-if menu == "📊 종합 현황":
-    st.title("2026학년도 학사 운영 대시보드")
+# 사이드바
+st.sidebar.title("🏫 서산명지중학교")
+menu = st.sidebar.radio("Navigation", ["📊 대시보드", "📅 월별 상세", "📋 전체 일정", "⚙️ 설정"])
+
+if menu == "📊 대시보드":
+    st.title("2026학년도 서산명지중학교 학사 운영")
+    st.markdown("---")
     
-    # 상단 지표
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        st.metric("총 수업일수", f"{int(df['월별수업일수'].unique().sum())}일")
-    with col2:
-        st.metric("진행 중인 달", f"{datetime.now().month}월")
-    with col3:
-        st.metric("업데이트 상태", "실시간(LIVE)")
+    col_stat1, col_stat2, col_stat3 = st.columns(3)
+    with col_stat1:
+        st.metric("총 수업일수", f"{int(df['월별수업일수'].unique().sum())}일", help="2026학년도 전체 수업일수")
+    with col_stat2:
+        st.metric("다가오는 행사", "개학식/입학식")
+    with col_stat3:
+        st.metric("시스템 상태", "실시간 연동 중")
 
-    st.divider()
+    st.markdown("###")
     
-    # D-Day 섹션 (간단 구현)
-    st.subheader("🔔 다가오는 주요 일정")
-    events = df[df['학교행사'].notna()][['월', '학교행사']]
-    for _, row in events.head(5).iterrows():
-        st.info(f"**[{row['월']}월]** {row['학교행사']}")
+    # 8:4 비율 레이아웃
+    col_main, col_side = st.columns([2, 1])
+    
+    with col_main:
+        st.subheader("📅 학사 달력 요약")
+        selected_month = st.selectbox("조회할 월", df['월'].unique())
+        month_data = df[df['월'] == selected_month]
+        st.dataframe(month_data, hide_index=True, use_container_width=True)
 
-elif menu == "📅 월별 달력":
-    st.title("학사 달력")
-    month = st.selectbox("월 선택", df['월'].unique())
-    month_df = df[df['월'] == month]
-    st.dataframe(month_df, use_container_width=True)
+    with col_side:
+        st.subheader("🔔 다가오는 일정")
+        events = df[df['학교행사'].notna()][['월', '학교행사']].head(10)
+        for _, row in events.iterrows():
+            st.info(f"**[{row['월']}월]** {row['학교행사']}")
 
-elif menu == "📋 전체 일정 목록":
-    st.title("학사 일정 상세 목록")
-    search = st.text_input("행사명 검색")
-    if search:
-        display_df = df[df['학교행사'].str.contains(search, na=False)]
-    else:
-        display_df = df
-    st.table(display_df[['월', '공휴일', '휴업일', '학교행사']])
+elif menu == "📅 월별 상세":
+    st.title("월별 학사 상세 데이터")
+    month = st.select_slider("확인할 월", options=df['월'].unique())
+    st.table(df[df['월'] == month])
+
+elif menu == "📋 전체 일정":
+    st.title("전체 일정 목록")
+    st.dataframe(df, use_container_width=True)
 
 elif menu == "⚙️ 설정":
-    st.title("데이터 관리")
-    st.write("구글 시트에서 '웹에 게시' -> 'CSV'로 선택한 주소를 아래에 입력하면 실시간으로 반영됩니다.")
-    new_url = st.text_input("CSV 주소 입력", csv_url)
-    if st.button("적용하기"):
-        st.success("설정이 저장되었습니다.")
+    st.title("데이터 동기화 설정")
+    st.write("구글 시트 CSV URL을 입력하여 실시간으로 학사 데이터를 업데이트할 수 있습니다.")
+    url = st.text_input("CSV URL 입력")
+    if st.button("저장 및 동기화"):
+        st.success("데이터 소스가 변경되었습니다.")

@@ -36,9 +36,8 @@ const CalendarView: React.FC<Props> = ({ data, isMini = false }) => {
   const handlePrev = () => setViewIndex(prev => (prev > 0 ? prev - 1 : 0));
   const handleNext = () => setViewIndex(prev => (prev < MONTH_ORDER.length - 1 ? prev + 1 : prev));
 
-  const daysLabels = ['일', '월', '화', '수', '목', '금', '토'];
+  const daysLabels = ['일요일', '월요일', '화요일', '수요일', '목요일', '금요일', '토요일'];
 
-  // 월별 총 수업일수 계산 (데이터 내 주간 수업일수 합산)
   const monthlyTotalDays = useMemo(() => {
     return data
       .filter(w => w.month === currentMonth && w.year === currentYear)
@@ -46,35 +45,42 @@ const CalendarView: React.FC<Props> = ({ data, isMini = false }) => {
   }, [data, currentMonth, currentYear]);
 
   return (
-    <div className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden flex flex-col min-h-[720px]">
-      <div className="flex items-center justify-between p-6 border-b border-slate-100 bg-white">
-        <div className="flex items-center gap-4">
-          <h3 className="text-2xl font-black text-slate-900 tracking-tight">
-            {currentYear}. {currentMonth < 10 ? `0${currentMonth}` : currentMonth}
-          </h3>
-          <div className="flex gap-1">
-            <button onClick={handlePrev} disabled={viewIndex === 0} className="p-2 hover:bg-slate-100 rounded-xl disabled:opacity-20 transition-all">
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
+    <div className="bg-white rounded-[3.5rem] shadow-2xl border border-slate-200 overflow-hidden flex flex-col min-h-[950px]">
+      {/* Header: Super Large Month Display */}
+      <div className="flex items-center justify-between p-12 border-b border-slate-100 bg-white">
+        <div className="flex items-center gap-10">
+          <div className="flex flex-col">
+            <span className="text-slate-400 text-base font-black uppercase tracking-[0.3em] mb-2">{currentYear} ACADEMIC CALENDAR</span>
+            <h3 className="text-7xl lg:text-8xl font-black text-slate-900 tracking-tighter leading-none">
+              {currentMonth}월
+            </h3>
+          </div>
+          <div className="flex gap-4 ml-6">
+            <button onClick={handlePrev} disabled={viewIndex === 0} className="p-5 hover:bg-slate-100 rounded-3xl disabled:opacity-5 transition-all border-2 border-slate-100 active:scale-95">
+              <svg className="w-10 h-10 text-slate-900" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={4} d="M15 19l-7-7 7-7" /></svg>
             </button>
-            <button onClick={handleNext} disabled={viewIndex === MONTH_ORDER.length - 1} className="p-2 hover:bg-slate-100 rounded-xl disabled:opacity-20 transition-all">
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+            <button onClick={handleNext} disabled={viewIndex === MONTH_ORDER.length - 1} className="p-5 hover:bg-slate-100 rounded-3xl disabled:opacity-5 transition-all border-2 border-slate-100 active:scale-95">
+              <svg className="w-10 h-10 text-slate-900" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={4} d="M9 5l7 7-7 7" /></svg>
             </button>
           </div>
         </div>
-        <div className="bg-blue-600 text-white px-4 py-1.5 rounded-full text-xs font-bold shadow-lg shadow-blue-100">
-          월 수업일수 {monthlyTotalDays}일
+        <div className="bg-slate-900 text-white px-10 py-6 rounded-[2.5rem] shadow-2xl flex flex-col items-center justify-center">
+          <span className="text-xs font-black uppercase opacity-50 tracking-widest mb-1">월 수업일수</span>
+          <span className="text-4xl font-black tracking-tighter">{monthlyTotalDays}일</span>
         </div>
       </div>
 
-      <div className="grid grid-cols-7 border-b border-slate-100 bg-slate-50/50">
+      {/* Week Labels: Large and Clear */}
+      <div className="grid grid-cols-7 border-b border-slate-100 bg-slate-50">
         {daysLabels.map((label, i) => (
-          <div key={label} className={`py-4 text-center text-[11px] font-black uppercase tracking-widest ${i === 0 ? 'text-red-500' : i === 6 ? 'text-blue-500' : 'text-slate-400'}`}>
+          <div key={label} className={`py-6 text-center text-sm lg:text-base font-black uppercase tracking-[0.2em] ${i === 0 ? 'text-rose-500' : i === 6 ? 'text-indigo-600' : 'text-slate-500'}`}>
             {label}
           </div>
         ))}
       </div>
 
-      <div className="grid grid-cols-7 flex-grow auto-rows-fr gap-px bg-slate-100">
+      {/* Grid: High Visibility Cells */}
+      <div className="grid grid-cols-7 flex-grow auto-rows-fr gap-px bg-slate-200">
         {calendarGrid.map((week, wIdx) => (
           <React.Fragment key={wIdx}>
             {week.map((dayNum, dIdx) => {
@@ -82,18 +88,18 @@ const CalendarView: React.FC<Props> = ({ data, isMini = false }) => {
               const uniqueEvents = Array.from(new Map<string, SchoolEvent>(dayEvents.map(e => [e.title, e])).values());
 
               return (
-                <div key={`${wIdx}-${dIdx}`} className={`bg-white p-3 min-h-[115px] relative hover:bg-slate-50/50 transition-colors ${!dayNum ? 'bg-slate-50/30' : ''}`}>
+                <div key={`${wIdx}-${dIdx}`} className={`bg-white p-6 min-h-[160px] relative hover:bg-indigo-50/30 transition-all ${!dayNum ? 'bg-slate-50/50' : ''}`}>
                   {dayNum && (
                     <div className="flex flex-col h-full">
-                      <span className={`text-sm font-black mb-2 ${dIdx === 0 ? 'text-red-500' : dIdx === 6 ? 'text-blue-500' : 'text-slate-800'}`}>
+                      <span className={`text-4xl lg:text-5xl font-black mb-4 tracking-tighter leading-none ${dIdx === 0 ? 'text-rose-500' : dIdx === 6 ? 'text-indigo-600' : 'text-slate-900'}`}>
                         {dayNum}
                       </span>
-                      <div className="space-y-1 overflow-y-auto max-h-[85px] scrollbar-hide">
+                      <div className="space-y-2 overflow-y-auto max-h-[120px] pr-1 custom-scrollbar">
                         {uniqueEvents.map((evt, eIdx) => (
-                          <div key={eIdx} className={`text-[10px] leading-tight px-2 py-1 rounded-lg border font-bold ${
+                          <div key={eIdx} className={`text-[12px] lg:text-[13px] leading-tight px-3.5 py-2.5 rounded-[1.2rem] border-2 font-black shadow-sm ${
                             evt.category === EventCategory.HOLIDAY 
-                              ? 'bg-red-50 text-red-700 border-red-100' 
-                              : 'bg-blue-50 text-blue-700 border-blue-100'
+                              ? 'bg-rose-50 text-rose-700 border-rose-100' 
+                              : 'bg-indigo-50 text-indigo-700 border-indigo-100'
                           }`}>
                             {evt.title}
                           </div>
@@ -107,6 +113,11 @@ const CalendarView: React.FC<Props> = ({ data, isMini = false }) => {
           </React.Fragment>
         ))}
       </div>
+      <style>{`
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+      `}</style>
     </div>
   );
 };
