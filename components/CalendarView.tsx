@@ -83,12 +83,14 @@ const CalendarView: React.FC<Props> = ({ data, isMini = false }) => {
             {week.map((dayNum, dIdx) => {
               const dayEvents = dayNum ? allEventsForMonth.filter(e => e.date === dayNum) : [];
               const uniqueEvents = Array.from(new Map<string, SchoolEvent>(dayEvents.map(e => [e.title, e])).values());
+              // 해당 날짜가 일요일(dIdx === 0)이거나 휴무일(EventCategory.HOLIDAY) 일정이 하나라도 있으면 빨간색
+              const isHoliday = uniqueEvents.some(e => e.category === EventCategory.HOLIDAY);
 
               return (
                 <div key={`${wIdx}-${dIdx}`} className={`bg-white p-6 min-h-[160px] relative hover:bg-indigo-50/30 transition-all ${!dayNum ? 'bg-slate-50/50' : ''}`}>
                   {dayNum && (
                     <div className="flex flex-col h-full">
-                      <span className={`text-4xl lg:text-5xl font-black mb-4 tracking-tighter leading-none ${dIdx === 0 ? 'text-rose-500' : dIdx === 6 ? 'text-indigo-600' : 'text-slate-900'}`}>
+                      <span className={`text-4xl lg:text-5xl font-black mb-4 tracking-tighter leading-none ${isHoliday || dIdx === 0 ? 'text-rose-500 !important' : dIdx === 6 ? 'text-indigo-600' : 'text-slate-900'}`}>
                         {dayNum}
                       </span>
                       <div className="space-y-2 overflow-y-auto max-h-[120px] pr-1 custom-scrollbar">

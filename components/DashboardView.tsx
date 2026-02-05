@@ -50,18 +50,22 @@ const DashboardView: React.FC<Props> = ({ stats, data }) => {
     <div className="space-y-12">
       {/* Hero Section: Countdown */}
       {nextMainEvent && (
-        <div className="relative overflow-hidden rounded-[3rem] bg-slate-900 p-12 lg:p-16 text-white shadow-2xl">
+        <div className={`relative overflow-hidden rounded-[3rem] p-12 lg:p-16 text-white shadow-2xl transition-colors duration-500 ${
+          nextMainEvent.category === EventCategory.HOLIDAY ? 'bg-rose-700' : 'bg-slate-900'
+        }`}>
           <div className="relative z-10 flex flex-col xl:flex-row xl:items-center justify-between gap-12">
             <div className="space-y-6">
-              <span className="inline-flex items-center gap-2 bg-indigo-600 px-6 py-2.5 rounded-full text-xs font-black tracking-widest uppercase">
-                <span className="w-2 h-2 rounded-full bg-white animate-pulse"></span>
-                Next Academic Event
+              <span className={`inline-flex items-center gap-2 px-6 py-2.5 rounded-full text-xs font-black tracking-widest uppercase ${
+                nextMainEvent.category === EventCategory.HOLIDAY ? 'bg-white text-rose-700' : 'bg-indigo-600 text-white'
+              }`}>
+                <span className={`w-2 h-2 rounded-full animate-pulse ${nextMainEvent.category === EventCategory.HOLIDAY ? 'bg-rose-700' : 'bg-white'}`}></span>
+                {nextMainEvent.category === EventCategory.HOLIDAY ? 'School Holiday' : 'Next Academic Event'}
               </span>
               <h2 className="text-5xl lg:text-7xl font-black tracking-tighter leading-none">
                 {nextMainEvent.title}
               </h2>
-              <p className="text-slate-400 font-bold text-2xl">
-                {nextMainEvent.month}월 {nextMainEvent.date}일 학사 일정
+              <p className="text-white/70 font-bold text-2xl">
+                {nextMainEvent.month}월 {nextMainEvent.date}일 {nextMainEvent.category === EventCategory.HOLIDAY ? '쉬는 날' : '학사 일정'}
               </p>
             </div>
             
@@ -73,15 +77,15 @@ const DashboardView: React.FC<Props> = ({ stats, data }) => {
                   { label: '분', val: timeLeft.mins },
                   { label: '초', val: timeLeft.secs }
                 ].map((unit, idx) => (
-                  <div key={idx} className="flex flex-col items-center justify-center bg-white/5 backdrop-blur-3xl border border-white/10 w-28 h-32 lg:w-36 lg:h-40 rounded-[2.5rem] transition-transform hover:scale-105">
+                  <div key={idx} className="flex flex-col items-center justify-center bg-white/10 backdrop-blur-3xl border border-white/20 w-28 h-32 lg:w-36 lg:h-40 rounded-[2.5rem] transition-transform hover:scale-105">
                     <span className="text-5xl lg:text-7xl font-black tracking-tighter tabular-nums">{String(unit.val).padStart(2, '0')}</span>
-                    <span className="text-xs font-black uppercase tracking-[0.2em] mt-3 opacity-40">{unit.label}</span>
+                    <span className="text-xs font-black uppercase tracking-[0.2em] mt-3 opacity-60">{unit.label}</span>
                   </div>
                 ))}
               </div>
             )}
           </div>
-          <div className="absolute top-0 right-0 w-1/2 h-full bg-gradient-to-l from-indigo-500/10 to-transparent pointer-events-none"></div>
+          <div className="absolute top-0 right-0 w-1/2 h-full bg-gradient-to-l from-white/10 to-transparent pointer-events-none"></div>
           <div className="absolute -left-10 -bottom-10 text-[20rem] font-black italic text-white/5 select-none pointer-events-none tracking-tighter">MYEONGJI</div>
         </div>
       )}
@@ -109,26 +113,28 @@ const DashboardView: React.FC<Props> = ({ stats, data }) => {
                 <div key={idx} className="flex items-center gap-8 group">
                   <div className={`shrink-0 w-20 h-20 rounded-[2rem] flex flex-col items-center justify-center font-black border-2 transition-all group-hover:scale-110 shadow-sm ${
                     event.category === EventCategory.HOLIDAY 
-                      ? 'bg-rose-50 text-rose-600 border-rose-100' 
+                      ? 'bg-rose-600 text-white border-rose-600' 
                       : 'bg-indigo-50 text-indigo-600 border-indigo-100'
                   }`}>
                     <span className="text-xs leading-none opacity-50 mb-1">{event.month}월</span>
                     <span className="text-3xl leading-none tracking-tighter">{event.date}</span>
                   </div>
                   <div className="flex-grow min-w-0">
-                    <h4 className="text-xl font-black text-slate-800 truncate group-hover:text-indigo-600 transition-colors leading-tight">
+                    <h4 className={`text-xl font-black truncate group-hover:text-indigo-600 transition-colors leading-tight ${
+                      event.category === EventCategory.HOLIDAY ? 'text-rose-600' : 'text-slate-800'
+                    }`}>
                       {event.title}
                     </h4>
                     <div className="flex items-center gap-3 mt-2">
                       <span className={`text-[11px] font-black px-3 py-1 rounded-full ${
                         event.dDay === 0 
                         ? 'bg-rose-600 text-white animate-bounce' 
-                        : 'bg-slate-900 text-white'
+                        : (event.category === EventCategory.HOLIDAY ? 'bg-rose-100 text-rose-700' : 'bg-slate-900 text-white')
                       }`}>
                         {event.dDay === 0 ? 'D-DAY' : `D-${event.dDay}`}
                       </span>
-                      <span className="text-[12px] font-bold text-slate-400">
-                        {event.category === EventCategory.HOLIDAY ? '휴업일' : '학교 행사'}
+                      <span className={`text-[12px] font-bold ${event.category === EventCategory.HOLIDAY ? 'text-rose-500' : 'text-slate-400'}`}>
+                        {event.category === EventCategory.HOLIDAY ? '쉬는 날' : '학교 행사'}
                       </span>
                     </div>
                   </div>
