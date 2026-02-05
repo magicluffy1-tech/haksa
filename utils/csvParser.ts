@@ -1,137 +1,143 @@
 
 import { WeeklyData, EventCategory, SchoolEvent } from '../types';
 
-/**
- * 문자열에서 행사명과 날짜를 추출합니다.
- * 예: "꿈디딤진로융합활동(16), 해양수련원암벽등반체험(17)" -> 각각 16일, 17일 이벤트 생성
- */
-const parseEventString = (eventStr: string, year: number, month: number, category: EventCategory): SchoolEvent[] => {
-  if (!eventStr || eventStr.trim() === '') return [];
+const splitCSVLine = (text: string): string[] => {
+  const result: string[] = [];
+  let current = '';
+  let inQuotes = false;
+  for (let i = 0; i < text.length; i++) {
+    const char = text[i];
+    if (char === '"') inQuotes = !inQuotes;
+    else if (char === ',' && !inQuotes) {
+      result.push(current.trim());
+      current = '';
+    } else {
+      current += char;
+    }
+  }
+  result.push(current.trim());
+  return result;
+};
+
+// 휴업일 여부 판단 로직
+const isHolidayTitle = (title: string): boolean => {
+  const holidayKeywords = ['휴업', '공휴일', '방학', '절', '날', '토요일', '일요일', '대체'];
+  return holidayKeywords.some(key => title.includes(key));
+};
+
+const extractEventsFromDescription = (desc: string, baseYear: number, baseMonth: number): SchoolEvent[] => {
+  if (!desc) return [];
   const events: SchoolEvent[] = [];
-  
-  // 정규식 개선: 
-  // ([^()]+?) : 괄호가 나오기 전까지의 문자 (비탐욕적 매칭으로 제목 확보)
-  // \s* : 혹시 모를 공백 허용
-  // \(([\d~,\s\-]+)\) : 괄호 안의 날짜 숫자 및 기호들
   const regex = /([^()]+?)\s*\(([\d~,\s\-]+)\)/g;
   let match;
 
-  while ((match = regex.exec(eventStr)) !== null) {
-    let title = match[1].trim();
-    // 앞뒤 쉼표 제거
-    title = title.replace(/^[,\s]+|[,\s]+$/g, '');
-    const dateRange = match[2].trim();
+  while ((match = regex.exec(desc)) !== null) {
+    const title = match[1].trim().replace(/^[,\s]+|[,\s]+$/g, '');
+    const datePart = match[2].trim();
+    const category = isHolidayTitle(title) ? EventCategory.HOLIDAY : EventCategory.EVENT;
 
-    if (!title) continue;
-
-    // 1. 범위형 처리 (예: 28~30)
-    if (dateRange.includes('~')) {
-      const parts = dateRange.split('~').map(d => parseInt(d.trim()));
-      const start = parts[0];
-      const end = parts[1];
-      if (!isNaN(start) && !isNaN(end)) {
-        for (let d = start; d <= end; d++) {
-          events.push({ title, date: d, month, year, category, isRange: true });
+    if (datePart.includes('~') || datePart.includes('-')) {
+      const sep = datePart.includes('~') ? '~' : '-';
+      const [s, e] = datePart.split(sep).map(b => parseInt(b.trim()));
+      if (!isNaN(s) && !isNaN(e)) {
+        // 월을 넘어가는 경우 (예: 29~2) 처리
+        if (e < s) {
+          // 시작 월에 기록
+          for (let d = s; d <= 31; d++) {
+            const lastDay = new Date(baseYear, baseMonth, 0).getDate();
+            if (d <= lastDay) events.push({ title, date: d, month: baseMonth, year: baseYear, category });
+          }
+          // 다음 월에 기록
+          const nextMonth = baseMonth === 12 ? 1 : baseMonth + 1;
+          const nextYear = baseMonth === 12 ? baseYear + 1 : baseYear;
+          for (let d = 1; d <= e; d++) {
+            events.push({ title, date: d, month: nextMonth, year: nextYear, category });
+          }
+        } else {
+          for (let d = s; d <= e; d++) {
+            events.push({ title, date: d, month: baseMonth, year: baseYear, category });
+          }
         }
       }
-    } 
-    // 2. 개별/다중 날짜 처리 (예: 16 또는 12, 19)
-    else {
-      const dates = dateRange.split(',').map(d => parseInt(d.trim()));
-      dates.forEach(d => {
-        if (!isNaN(d)) {
-          events.push({ title, date: d, month, year, category, isRange: false });
-        }
+    } else {
+      datePart.split(',').forEach(dStr => {
+        const d = parseInt(dStr.trim());
+        if (!isNaN(d)) events.push({ title, date: d, month: baseMonth, year: baseYear, category });
       });
     }
   }
-
   return events;
 };
 
-/**
- * CSV 데이터를 WeeklyData 구조로 변환합니다.
- */
 export const parseCSVToWeeklyData = (csvText: string): WeeklyData[] => {
-  if (!csvText || csvText.trim().length < 10) return [];
-
+  if (!csvText) return [];
   const lines = csvText.trim().split(/\r?\n/);
-  const tempWeeklyData: any[] = [];
-  const masterEvents: SchoolEvent[] = [];
+  const eventPool: SchoolEvent[] = [];
 
-  const parseLine = (text: string) => {
-    const parts: string[] = [];
-    let temp = '';
-    let inQuotes = false;
-    for (let i = 0; i < text.length; i++) {
-      const char = text[i];
-      if (char === '"') inQuotes = !inQuotes;
-      else if (char === ',' && !inQuotes) { parts.push(temp.trim()); temp = ''; }
-      else temp += char;
+  // 1. 모든 행을 돌며 이벤트 추출
+  lines.forEach((line, idx) => {
+    if (idx === 0) return; // 헤더 건너뛰기
+    const cols = splitCSVLine(line);
+    if (cols.length < 4) return;
+
+    const mainTitle = cols[0]; // 행사명
+    const startDateStr = cols[1]; // 시작일 (2026-03-03)
+    const description = cols[3]; // 설명
+
+    if (!startDateStr || !startDateStr.includes('-')) return;
+
+    const [y, m, d] = startDateStr.split('-').map(v => parseInt(v));
+    
+    // 설명(D열)에 데이터가 있으면 거기서 추출하고, 없으면 행사명(A열)을 사용
+    if (description && description.includes('(')) {
+      eventPool.push(...extractEventsFromDescription(description, y, m));
+    } else {
+      const cat = isHolidayTitle(mainTitle) ? EventCategory.HOLIDAY : EventCategory.EVENT;
+      eventPool.push({ title: mainTitle, date: d, month: m, year: y, category: cat });
     }
-    parts.push(temp.trim());
-    return parts;
-  };
-
-  lines.forEach((line) => {
-    if (!line.trim()) return;
-    
-    const parts = parseLine(line);
-    
-    // B열 (Index 1) : 월
-    const month = parseInt(parts[1]);
-    
-    // 데이터 행인지 검사 (월 정보가 1~12 사이여야 함)
-    if (isNaN(month) || month < 1 || month > 12) return;
-    
-    // 학년도 설정
-    const year = (month === 1 || month === 2) ? 2027 : 2026;
-
-    // K(10)=공휴일, L(11)=휴업일, O(14)=학교행사
-    const rawHolidays = parts[10] || ""; 
-    const rawBreaks = parts[11] || "";   
-    const rawEvents = parts[14] || "";   
-
-    // 모든 행사를 하나의 마스터 리스트에 수집
-    masterEvents.push(...parseEventString(rawEvents, year, month, EventCategory.EVENT));
-    masterEvents.push(...parseEventString(rawHolidays, year, month, EventCategory.HOLIDAY));
-    masterEvents.push(...parseEventString(rawBreaks, year, month, EventCategory.HOLIDAY));
-
-    // D~J열 (Index 3~9) : 날짜
-    const days = [3, 4, 5, 6, 7, 8, 9].map(idx => {
-      const val = parts[idx];
-      return (val && val.trim() !== '') ? parseInt(val.trim()) : null;
-    });
-
-    tempWeeklyData.push({
-      month,
-      year,
-      weekNum: parseInt(parts[2]) || 0,
-      days,
-      schoolDays: 0
-    });
   });
 
-  // 주별 데이터에 행사 매칭
-  return tempWeeklyData.map(week => {
-    let schoolDaysCount = 0;
+  // 2. 달력 표시를 위한 주간 스켈레톤 생성 (2026년 3월 ~ 2027년 2월)
+  const result: WeeklyData[] = [];
+  const startMonthOrder = [3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 1, 2];
+  
+  startMonthOrder.forEach(month => {
+    const year = month <= 2 ? 2027 : 2026;
+    const firstDay = new Date(year, month - 1, 1).getDay();
+    const lastDate = new Date(year, month, 0).getDate();
     
-    // 수업일수 계산 (월~금 인덱스 1~5)
-    for (let i = 1; i <= 5; i++) {
-      const dayNum = week.days[i];
-      if (dayNum !== null) {
-        const isHoliday = masterEvents.some(e => 
-          e.year === week.year && e.month === week.month && e.date === dayNum && e.category === EventCategory.HOLIDAY
+    let currentDay = 1;
+    let weekNum = 1;
+
+    while (currentDay <= lastDate) {
+      const days: (number | null)[] = Array(7).fill(null);
+      let hasData = false;
+      
+      for (let i = (weekNum === 1 ? firstDay : 0); i < 7 && currentDay <= lastDate; i++) {
+        days[i] = currentDay++;
+        hasData = true;
+      }
+
+      if (hasData) {
+        const weekEvents = eventPool.filter(e => 
+          e.year === year && e.month === month && days.includes(e.date)
         );
-        if (!isHoliday) schoolDaysCount++;
+
+        // 수업일수 계산 (월~금 중 휴업일이 아닌 날)
+        let sDays = 0;
+        for (let i = 1; i <= 5; i++) {
+          const d = days[i];
+          if (d) {
+            const isHoliday = eventPool.some(e => e.year === year && e.month === month && e.date === d && e.category === EventCategory.HOLIDAY);
+            if (!isHoliday) sDays++;
+          }
+        }
+
+        result.push({ year, month, weekNum, days, events: weekEvents, schoolDays: sDays });
+        weekNum++;
       }
     }
-
-    // 해당 주에 포함된 모든 날짜의 행사를 추출
-    const matchedEvents = masterEvents.filter(e => 
-      e.month === week.month && e.year === week.year && week.days.includes(e.date)
-    );
-
-    return { ...week, events: matchedEvents, schoolDays: schoolDaysCount };
   });
+
+  return result;
 };

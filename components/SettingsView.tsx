@@ -1,5 +1,6 @@
 
 import React, { useState } from 'react';
+import { WeeklyData, EventCategory, SchoolEvent } from '../types';
 
 interface Props {
   onUpdate: (url: string) => void;
@@ -8,74 +9,92 @@ interface Props {
   onExport: () => void;
   onImport: (jsonStr: string) => void;
   currentUrl: string;
+  data: WeeklyData[];
 }
 
-const SettingsView: React.FC<Props> = ({ onUpdate, onReset, onRestore, onExport, onImport, currentUrl }) => {
-  const [urlInput, setUrlInput] = useState(currentUrl);
+const SettingsView: React.FC<Props> = ({ onUpdate, onReset, onRestore, onExport, onImport, currentUrl, data }) => {
+  const [showDebug, setShowDebug] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!urlInput.trim()) return;
-    onUpdate(urlInput.trim());
-  };
+  // 모든 이벤트를 평탄화하여 중복 제거 후 정렬
+  // SchoolEvent 타입을 명시하여 unknown 오류 수정
+  const allEvents = Array.from(new Map<string, SchoolEvent>(
+    data.flatMap(w => w.events).map(e => [`${e.year}-${e.month}-${e.date}-${e.title}`, e] as [string, SchoolEvent])
+  ).values()).sort((a, b) => {
+    if (a.year !== b.year) return a.year - b.year;
+    if (a.month !== b.month) return a.month - b.month;
+    return a.date - b.date;
+  });
 
   return (
-    <div className="max-w-5xl mx-auto space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div className="bg-emerald-600 rounded-[3rem] p-12 text-white shadow-2xl relative overflow-hidden">
+    <div className="max-w-5xl mx-auto space-y-10 pb-20">
+      <div className="bg-indigo-600 rounded-[3rem] p-12 text-white shadow-2xl relative overflow-hidden">
         <div className="relative z-10">
-          <h2 className="text-4xl font-black mb-4 tracking-tighter">🌍 전역 마스터 동기화 완료</h2>
-          <p className="text-emerald-50 text-lg font-bold leading-relaxed max-w-2xl">
-            이 대시보드는 현재 구글 스프레드시트와 직접 연결되어 있습니다.<br/>
-            시트의 내용을 수정하면 접속하는 모든 사람에게 동일한 결과가 보여집니다.
+          <h2 className="text-4xl font-black mb-4 tracking-tighter">⚙️ 시스템 설정 및 진단</h2>
+          <p className="text-indigo-50 text-lg font-bold leading-relaxed max-w-2xl">
+            데이터가 올바르게 표시되지 않는다면 아래의 진단 도구를 통해<br/>
+            시스템이 구글 시트에서 어떤 데이터를 읽어왔는지 확인하세요.
           </p>
         </div>
-        <div className="absolute -right-20 -bottom-20 text-[15rem] font-black text-white/10 italic select-none">LIVE</div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-        <section className="bg-white p-10 rounded-[3rem] shadow-xl border border-slate-200 space-y-8">
-          <div>
-            <span className="text-xs font-black text-indigo-600 bg-indigo-50 px-3 py-1 rounded-full uppercase tracking-widest mb-4 inline-block">데이터 관리</span>
-            <h3 className="text-2xl font-black text-slate-900">연동된 구글 시트 주소</h3>
-          </div>
-          <div className="p-6 bg-slate-50 border-2 border-slate-100 rounded-[1.5rem] font-bold text-slate-400 break-all text-xs">
+        <section className="bg-white p-10 rounded-[3rem] shadow-xl border border-slate-200">
+          <h3 className="text-2xl font-black text-slate-900 mb-6">데이터 소스</h3>
+          <div className="p-5 bg-slate-50 rounded-2xl font-mono text-[10px] text-slate-400 break-all border border-slate-100 mb-6">
             {currentUrl}
           </div>
-          <p className="text-xs text-slate-400 font-bold leading-relaxed italic">
-            * 구글 시트의 [파일 &gt; 공유 &gt; 웹에 게시 &gt; CSV 형식] 주소가 적용되어 있습니다.
-          </p>
-          <button onClick={() => window.location.reload()} className="w-full py-5 bg-slate-900 text-white rounded-[1.5rem] font-black hover:bg-black transition-all shadow-xl active:scale-95">
-            🔄 강제 새로고침 (데이터 동기화)
+          <button onClick={() => window.location.reload()} className="w-full py-5 bg-slate-900 text-white rounded-2xl font-black shadow-xl active:scale-95 transition-all">
+            🔄 시트 데이터 즉시 새로고침
           </button>
         </section>
 
-        <section className="bg-white p-10 rounded-[3rem] shadow-xl border border-slate-200 space-y-8 flex flex-col justify-between">
+        <section className="bg-white p-10 rounded-[3rem] shadow-xl border border-slate-200 flex flex-col justify-between">
           <div>
-            <span className="text-xs font-black text-emerald-600 bg-emerald-50 px-3 py-1 rounded-full uppercase tracking-widest mb-4 inline-block">공유 기능</span>
-            <h3 className="text-2xl font-black text-slate-900">공용 주소 복사</h3>
-            <p className="text-sm text-slate-500 font-bold mt-4 leading-relaxed">
-              이 주소를 다른 선생님들이나 학생들에게 공유하세요. 누구나 동일한 학사 운영 대시보드를 확인할 수 있습니다.
-            </p>
+            <h3 className="text-2xl font-black text-slate-900 mb-4">공유 및 복구</h3>
+            <div className="flex flex-col gap-3">
+              <button onClick={onExport} className="w-full py-4 bg-emerald-600 text-white rounded-xl font-black text-sm">📋 주소 복사하기</button>
+              <button onClick={onRestore} className="w-full py-4 bg-indigo-50 text-indigo-600 border border-indigo-100 rounded-xl font-black text-sm">🔄 숨긴 일정 모두 복구</button>
+            </div>
           </div>
-          <button 
-            onClick={onExport}
-            className="w-full py-5 bg-emerald-600 text-white rounded-[1.5rem] font-black hover:bg-emerald-700 transition-all shadow-xl flex items-center justify-center gap-3 active:scale-95"
-          >
-            📋 대시보드 주소 복사하기
-          </button>
         </section>
       </div>
 
-      <div className="bg-white p-10 rounded-[3rem] border border-slate-200 shadow-sm flex items-center justify-between">
-        <div>
-          <h4 className="text-xl font-black text-slate-900">숨김 일정 복구</h4>
-          <p className="text-sm text-slate-400 font-bold mt-1">내가 실수로 숨긴 일정들을 다시 화면에 표시합니다.</p>
-        </div>
+      <div className="bg-white rounded-[3rem] border-2 border-slate-100 overflow-hidden shadow-sm">
         <button 
-          onClick={onRestore}
-          className="px-10 py-4 bg-indigo-50 text-indigo-600 rounded-2xl font-black border border-indigo-100 hover:bg-indigo-100 transition-all"
+          onClick={() => setShowDebug(!showDebug)}
+          className="w-full p-8 flex items-center justify-between hover:bg-slate-50 transition-all"
         >
-          일정 모두 복구
+          <div className="text-left">
+            <h4 className="text-xl font-black text-slate-900">🔍 데이터 진단 (분석 결과 보기)</h4>
+            <p className="text-sm text-slate-400 font-bold">시스템이 시트에서 성공적으로 추출한 모든 일정 목록입니다.</p>
+          </div>
+          <span className={`text-2xl transition-transform ${showDebug ? 'rotate-180' : ''}`}>▼</span>
+        </button>
+        
+        {showDebug && (
+          <div className="p-8 bg-slate-50 border-t-2 border-slate-100">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {allEvents.length === 0 ? (
+                <div className="col-span-full py-10 text-center text-slate-400 font-black">추출된 일정이 없습니다. 시트 양식을 확인해주세요.</div>
+              ) : (
+                allEvents.map((e, i) => (
+                  <div key={i} className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4">
+                    <div className={`w-12 h-12 rounded-lg flex flex-col items-center justify-center font-black text-xs ${e.category === EventCategory.HOLIDAY ? 'bg-rose-100 text-rose-600' : 'bg-indigo-100 text-indigo-600'}`}>
+                      <span>{e.month}월</span>
+                      <span>{e.date}일</span>
+                    </div>
+                    <div className="font-bold text-sm text-slate-800 truncate">{e.title}</div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+      
+      <div className="text-center pt-10">
+        <button onClick={onReset} className="text-slate-300 hover:text-rose-500 font-black text-xs underline decoration-dotted">
+          모든 로컬 설정 초기화
         </button>
       </div>
     </div>
